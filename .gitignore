@@ -5,3 +5,5 @@ prompts/
 tmp/
 
 venv/
+
+sync-agent-branch.sh
