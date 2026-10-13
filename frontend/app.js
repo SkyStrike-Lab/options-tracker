@@ -177,10 +177,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('new-date').valueAsDate = new Date();
         globalExpInput.valueAsDate = getNextFriday();
         globalMultiplierInput.value = 100;
+        const overrideCheckbox = document.getElementById('new-override-max-loss');
+        if (overrideCheckbox) overrideCheckbox.checked = false;
         legsContainer.innerHTML = '';
         addLegEntry(); 
         calculateMaxLoss(); // Initialize fields
     });
+
+    const newOverrideCheckbox = document.getElementById('new-override-max-loss');
+    if (newOverrideCheckbox) {
+        newOverrideCheckbox.addEventListener('change', () => {
+            calculateMaxLoss();
+            if (newOverrideCheckbox.checked) {
+                document.getElementById('new-max-loss').focus();
+            }
+        });
+    }
 
     btnAddLeg.addEventListener('click', () => {
         addLegEntry();
@@ -196,7 +208,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${mmm} ${dd} '${yy} ${strike} ${cp}`;
     }
 
+    function setMaxLossInputState(inputEl, isOverridden) {
+        if (!inputEl) return;
+        if (isOverridden) {
+            inputEl.removeAttribute('readonly');
+            inputEl.classList.remove('max-loss-input-readonly');
+            inputEl.classList.add('max-loss-input-editable');
+        } else {
+            inputEl.setAttribute('readonly', 'true');
+            inputEl.classList.remove('max-loss-input-editable');
+            inputEl.classList.add('max-loss-input-readonly');
+        }
+    }
+
     function calculateMaxLoss() {
+        const overrideCheckbox = document.getElementById('new-override-max-loss');
+        const maxLossInput = document.getElementById('new-max-loss');
+        const isOverridden = overrideCheckbox && overrideCheckbox.checked;
+        setMaxLossInputState(maxLossInput, isOverridden);
+
         const legs = Array.from(legsContainer.querySelectorAll('.leg-entry'));
         const qty = parseInt(globalQtyInput.value) || 0;
         const multiplier = parseFloat(globalMultiplierInput.value) || 0;
@@ -221,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maxLoss = Math.abs(totalNetUsd);
                 breakeven = strike - netPremiumPerShare;
             } else if (type === 'STO' && cp === 'Call') {
-                maxLoss = 999999;
+                maxLoss = 0;
                 breakeven = strike + netPremiumPerShare;
             } else if (type === 'BTO' && cp === 'Call') {
                 maxLoss = Math.abs(totalNetUsd);
@@ -256,7 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        document.getElementById('new-max-loss').value = formatCurrency(maxLoss);
+        if (!isOverridden) {
+            maxLossInput.value = formatCurrency(maxLoss);
+        }
         document.getElementById('new-breakeven').value = breakeven > 0 ? breakeven.toFixed(2) : '-';
     }
 
@@ -1053,6 +1085,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateEditMaxLoss() {
+        const overrideCheckbox = document.getElementById('edit-override-max-loss');
+        const maxLossInput = document.getElementById('edit-max-loss');
+        const isOverridden = overrideCheckbox && overrideCheckbox.checked;
+        setMaxLossInputState(maxLossInput, isOverridden);
+
         const type = document.getElementById('edit-type').value;
         const cp = document.getElementById('edit-cp').value;
         const strike = parseFloat(document.getElementById('edit-strike').value) || 0;
@@ -1095,14 +1132,16 @@ document.addEventListener('DOMContentLoaded', () => {
             maxLoss = Math.max(0, -openingTotalUsd);
             breakeven = strike - netPremiumPerShare;
         } else if (type === 'STO' && cp === 'Call') {
-            maxLoss = 999999;
+            maxLoss = 0;
             breakeven = strike + netPremiumPerShare;
         } else if (type === 'BTO' && cp === 'Call') {
             maxLoss = Math.max(0, -openingTotalUsd);
             breakeven = strike + netPremiumPerShare;
         }
         
-        document.getElementById('edit-max-loss').value = formatCurrency(maxLoss);
+        if (!isOverridden) {
+            maxLossInput.value = formatCurrency(maxLoss);
+        }
         document.getElementById('edit-breakeven').value = breakeven > 0 ? breakeven.toFixed(2) : '-';
     }
 
@@ -1125,7 +1164,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-cp').value = pos.call_put || 'Put';
         document.getElementById('edit-type').value = pos.initial_type;
         document.getElementById('edit-total-usd').value = formatCurrency(pos.total_cost_usd);
-        document.getElementById('edit-max-loss').value = pos.max_loss ? formatCurrency(pos.max_loss) : '0.00';
+        
+        const editOverrideCheckbox = document.getElementById('edit-override-max-loss');
+        const editMaxLossInput = document.getElementById('edit-max-loss');
+        const savedMaxLoss = pos.max_loss !== undefined && pos.max_loss !== null ? pos.max_loss : null;
+        if (editOverrideCheckbox) editOverrideCheckbox.checked = false;
+        setMaxLossInputState(editMaxLossInput, false);
+        editMaxLossInput.value = (savedMaxLoss !== null && savedMaxLoss !== 999999) ? formatCurrency(savedMaxLoss) : '0.00';
         // We'll call calculateEditMaxLoss which will populate breakeven
         
         const transContainer = document.getElementById('edit-transactions-container');
@@ -1196,8 +1241,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         calculateEditMaxLoss(); // Ensure breakeven is populated on load
+        if (savedMaxLoss !== null && savedMaxLoss !== 999999) {
+            editMaxLossInput.value = formatCurrency(savedMaxLoss);
+        }
         modalEdit.style.display = 'block';
     };
+
+    const editOverrideCheckboxEl = document.getElementById('edit-override-max-loss');
+    if (editOverrideCheckboxEl) {
+        editOverrideCheckboxEl.addEventListener('change', () => {
+            calculateEditMaxLoss();
+            if (editOverrideCheckboxEl.checked) {
+                document.getElementById('edit-max-loss').focus();
+            }
+        });
+    }
 
     ['edit-qty', 'edit-strike', 'edit-cp', 'edit-type', 'edit-multiplier'].forEach(id => {
         document.getElementById(id).addEventListener('input', calculateEditMaxLoss);
@@ -1310,6 +1368,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateGroupEditMaxLoss() {
+        const overrideCheckbox = document.getElementById('edit-group-override-max-loss');
+        const maxLossInput = document.getElementById('edit-group-max-loss');
+        const isOverridden = overrideCheckbox && overrideCheckbox.checked;
+        setMaxLossInputState(maxLossInput, isOverridden);
+
         const legs = Array.from(groupLegsContainer.querySelectorAll('.group-leg-row'));
         const qty = parseInt(document.getElementById('edit-group-qty').value) || 0;
         const multiplier = parseFloat(document.getElementById('edit-group-multiplier').value) || 100;
@@ -1359,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maxLoss = Math.abs(totalNetUsd);
                 breakeven = strike - netPremiumPerShare;
             } else if (type === 'STO' && cp === 'Call') {
-                maxLoss = 999999;
+                maxLoss = 0;
                 breakeven = strike + netPremiumPerShare;
             } else if (type === 'BTO' && cp === 'Call') {
                 maxLoss = Math.abs(totalNetUsd);
@@ -1367,7 +1430,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        document.getElementById('edit-group-max-loss').value = formatCurrency(maxLoss);
+        if (!isOverridden) {
+            maxLossInput.value = formatCurrency(maxLoss);
+        }
         document.getElementById('edit-group-breakeven').value = breakeven > 0 ? breakeven.toFixed(2) : '-';
     }
 
@@ -1386,7 +1451,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .reduce((sum, t) => sum + t.quantity, 0);
         document.getElementById('edit-group-qty').value = initialQty;
         
-        document.getElementById('edit-group-max-loss').value = group[0].max_loss ? formatCurrency(group[0].max_loss) : '0.00';
+        const groupOverrideCheckbox = document.getElementById('edit-group-override-max-loss');
+        const groupMaxLossInput = document.getElementById('edit-group-max-loss');
+        const savedGroupMaxLoss = group[0].max_loss !== undefined && group[0].max_loss !== null ? group[0].max_loss : null;
+        if (groupOverrideCheckbox) groupOverrideCheckbox.checked = false;
+        setMaxLossInputState(groupMaxLossInput, false);
+        groupMaxLossInput.value = (savedGroupMaxLoss !== null && savedGroupMaxLoss !== 999999) ? formatCurrency(savedGroupMaxLoss) : '0.00';
 
         // Show/hide Date Closed field
         const closedDateContainer = document.getElementById('edit-group-closed-date-container');
@@ -1534,8 +1604,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         calculateGroupEditMaxLoss(); // Ensure breakeven and max loss are populated on load
+        if (savedGroupMaxLoss !== null && savedGroupMaxLoss !== 999999) {
+            groupMaxLossInput.value = formatCurrency(savedGroupMaxLoss);
+        }
         modalGroupEdit.style.display = 'block';
     };
+
+    const groupOverrideCheckboxEl = document.getElementById('edit-group-override-max-loss');
+    if (groupOverrideCheckboxEl) {
+        groupOverrideCheckboxEl.addEventListener('change', () => {
+            calculateGroupEditMaxLoss();
+            if (groupOverrideCheckboxEl.checked) {
+                document.getElementById('edit-group-max-loss').focus();
+            }
+        });
+    }
 
     ['edit-group-qty', 'edit-group-exp-date', 'edit-group-multiplier'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
