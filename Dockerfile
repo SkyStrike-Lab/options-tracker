@@ -10,6 +10,13 @@ COPY . .
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
+# Create non-root user and set ownership
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -m -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8000
 
 ENV DATABASE_URL=sqlite:///./data/options.db
