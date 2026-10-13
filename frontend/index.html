@@ -131,15 +131,20 @@
 
                     <div class="form-row" style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label>Max Loss</label>
-                            <input type="text" id="new-max-loss" readonly style="font-weight: bold; color: var(--danger-color); background: #334155; opacity: 0.7;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="margin-bottom: 0;">Max Loss</label>
+                                <label class="risk-override-label">
+                                    <input type="checkbox" id="new-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
+                                </label>
+                            </div>
+                            <input type="text" id="new-max-loss" class="max-loss-input-readonly" readonly>
                         </div>
                         <div class="form-group">
                             <label>Breakeven Price</label>
                             <input type="text" id="new-breakeven" readonly style="font-weight: bold; color: var(--primary-color); background: #334155; opacity: 0.7;">
                         </div>
                         <div class="form-group" style="flex: 2; align-self: flex-end; font-size: 0.9rem; color: #64748b;">
-                            * Auto-calculated for Single legs and Vertical Spreads.
+                            * Auto-calculated for Single legs and Vertical Spreads. Check "Override / Covered" to set manually.
                         </div>
                     </div>
 
@@ -222,8 +227,13 @@
                             <input type="text" id="edit-total-usd" readonly style="background: #334155; opacity: 0.7;">
                         </div>
                         <div class="form-group">
-                            <label>Max Loss</label>
-                            <input type="text" id="edit-max-loss" readonly style="background: #334155; opacity: 0.7;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="margin-bottom: 0;">Max Loss</label>
+                                <label class="risk-override-label">
+                                    <input type="checkbox" id="edit-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
+                                </label>
+                            </div>
+                            <input type="text" id="edit-max-loss" class="max-loss-input-readonly" readonly>
                         </div>
                         <div class="form-group">
                             <label>Breakeven</label>
@@ -273,15 +283,20 @@
 
                     <div class="form-row" style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label>Max Loss</label>
-                            <input type="text" id="edit-group-max-loss" readonly style="font-weight: bold; color: var(--danger-color); background: #334155; opacity: 0.7;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="margin-bottom: 0;">Max Loss</label>
+                                <label class="risk-override-label">
+                                    <input type="checkbox" id="edit-group-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
+                                </label>
+                            </div>
+                            <input type="text" id="edit-group-max-loss" class="max-loss-input-readonly" readonly>
                         </div>
                         <div class="form-group">
                             <label>Breakeven Price</label>
                             <input type="text" id="edit-group-breakeven" readonly style="font-weight: bold; color: var(--primary-color); background: #334155; opacity: 0.7;">
                         </div>
                         <div class="form-group" style="flex: 2; align-self: flex-end; font-size: 0.9rem; color: #94a3b8;">
-                            * Unified risk for the entire group/spread. Manual override recommended for complex strategies.
+                            * Unified risk for the entire group/spread. Check "Override / Covered" to set manually.
                         </div>
                     </div>
 

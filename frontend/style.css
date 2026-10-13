@@ -728,3 +728,30 @@ table td {
     }
 }
 
+.max-loss-input-readonly {
+    font-weight: bold;
+    color: var(--danger-color);
+    background: #334155;
+    opacity: 0.7;
+}
+
+.max-loss-input-editable {
+    font-weight: bold;
+    color: var(--danger-color);
+    background: #0f172a;
+    border-color: #f59e0b;
+    opacity: 1;
+}
+
+.risk-override-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    user-select: none;
+}
+
