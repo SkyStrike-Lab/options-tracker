@@ -7,3 +7,4 @@ tmp/
 venv/
 
 sync-agent-branch.sh
+sync-branch.sh
