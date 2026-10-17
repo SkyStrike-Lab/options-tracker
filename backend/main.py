@@ -18,21 +18,11 @@ from .database import engine, get_db
 from .migrations_runner import run_migrations
 import yfinance as yf
 
-# Create tables
-models.Base.metadata.create_all(bind=engine)
-
-# Run Alembic migrations
+# Run Alembic migrations to manage schema versioning
 run_migrations()
 
-# Defensive migration for multiplier column
-try:
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE positions ADD COLUMN multiplier FLOAT DEFAULT 100.0"))
-        conn.commit()
-except Exception as e:
-    # Column likely already exists
-    pass
+# Ensure any additional model metadata tables exist
+models.Base.metadata.create_all(bind=engine)
 
 root_path = os.getenv("ROOT_PATH", "")
 app = FastAPI(root_path=root_path)

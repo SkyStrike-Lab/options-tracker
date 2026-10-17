@@ -18,18 +18,23 @@ def _get_alembic_config() -> Config:
     cfg.set_main_option("sqlalchemy.url", db_url)
     return cfg
 
-def _is_alembic_tracked(db_file: str) -> bool:
+def _needs_baseline_stamping(db_file: str) -> bool:
     if not os.path.exists(db_file):
         return False
     try:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
         cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='positions'"
+        )
+        has_positions = cursor.fetchone() is not None
+
+        cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"
         )
-        result = cursor.fetchone()
+        has_alembic = cursor.fetchone() is not None
         conn.close()
-        return result is not None
+        return has_positions and not has_alembic
     except Exception:
         return False
 
@@ -39,12 +44,15 @@ def run_migrations() -> None:
     cfg = _get_alembic_config()
 
     try:
-        if not _is_alembic_tracked(db_file):
-            if os.path.exists(db_file):
-                logger.info("Untracked database detected at %s.", db_file)
-                logger.info("Stamping at Alembic baseline revision '%s'...", BASELINE_REVISION)
-                command.stamp(cfg, BASELINE_REVISION)
-                logger.info("Database stamped successfully.")
+        db_dir = os.path.dirname(db_file)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
+        if _needs_baseline_stamping(db_file):
+            logger.info("Untracked legacy database with existing tables detected at %s.", db_file)
+            logger.info("Stamping at Alembic baseline revision '%s'...", BASELINE_REVISION)
+            command.stamp(cfg, BASELINE_REVISION)
+            logger.info("Database stamped successfully.")
                 
         logger.info("Running Alembic migrations...")
         command.upgrade(cfg, "head")
