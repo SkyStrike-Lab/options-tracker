@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: options-tracker
+  labels:
+    app: options-tracker
+spec:
+  type: ClusterIP
+  selector:
+    app: options-tracker
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

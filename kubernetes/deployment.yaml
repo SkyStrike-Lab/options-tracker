@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: options-tracker
+  labels:
+    app: options-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: options-tracker
+  template:
+    metadata:
+      labels:
+        app: options-tracker
+    spec:
+      envFrom:
+        - configMapRef:
+            name: options-tracker-config
+      containers:
+        - name: options-tracker
+          image: registry.home/options-tracker:placeholder
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: options-tracker-config
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: options-tracker-data-pvc
+        - name: config
+          persistentVolumeClaim:
+            claimName: options-tracker-config-pvc
