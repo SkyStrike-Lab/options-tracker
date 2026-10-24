@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: options-tracker
+  labels:
+    app: options-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: options-tracker
+  template:
+    metadata:
+      labels:
+        app: options-tracker
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: fix-permissions
+          image: busybox:latest
+          command: ["sh", "-c", "chown -R 1000:1000 /app/data"]
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: options-tracker-data
+              mountPath: /app/data
+      containers:
+        - name: options-tracker
+          image: registry.home/options-tracker:placeholder
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: options-tracker-config
+          volumeMounts:
+            - name: options-tracker-data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: options-tracker-data
+          persistentVolumeClaim:
+            claimName: options-tracker-data-pvc

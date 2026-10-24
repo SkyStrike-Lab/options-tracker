@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: options-tracker-config
+  labels:
+    app: options-tracker
+data:
+  DATABASE_URL: "sqlite:///./data/options.db"
+  ROOT_PATH: ""
