@@ -98,13 +98,14 @@ def get_occ_symbol(pos) -> Optional[str]:
     strike_str = f"{int(pos.strike_price * 1000):08d}"
     return f"{ticker}{exp_str}{cp_char}{strike_str}"
 
+IB_DATA_FILE = os.getenv("IB_DATA_FILE", os.path.join("data", "ib_data.json"))
+
 def load_ib_options_data() -> dict:
-    ib_data_path = os.path.join("data", "ib_data.json")
-    if not os.path.exists(ib_data_path):
+    if not os.path.exists(IB_DATA_FILE):
         return {}
     try:
         import json
-        with open(ib_data_path, "r") as f:
+        with open(IB_DATA_FILE, "r") as f:
             data = json.load(f)
         return {
             item["description"].strip(): {
@@ -115,7 +116,7 @@ def load_ib_options_data() -> dict:
             if item.get("type") == "OPT" and "description" in item
         }
     except Exception as e:
-        logger.error(f"Error loading ib_data.json: {e}")
+        logger.error(f"Error loading {IB_DATA_FILE}: {e}")
         return {}
 
 # API routes
@@ -133,15 +134,14 @@ def read_positions(status: str = None, db: Session = Depends(get_db)):
             pos.ib_unrealized_profits = None
 
     ib_report_dt = None
-    ib_data_path = os.path.join("data", "ib_data.json")
-    if os.path.exists(ib_data_path):
+    if os.path.exists(IB_DATA_FILE):
         try:
             import json
-            with open(ib_data_path, "r") as f:
+            with open(IB_DATA_FILE, "r") as f:
                 data = json.load(f)
             ib_report_dt = data.get("metadata", {}).get("generated_datetime")
         except Exception as e:
-            logger.error(f"Error reading generated_datetime from ib_data.json: {e}")
+            logger.error(f"Error reading generated_datetime from {IB_DATA_FILE}: {e}")
 
     return {
         "metadata": {

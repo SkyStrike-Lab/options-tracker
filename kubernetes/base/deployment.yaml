@@ -41,6 +41,9 @@ spec:
           volumeMounts:
             - name: options-tracker-data
               mountPath: /app/data
+            - name: ib-worker-data
+              mountPath: /app/ib-data
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /
@@ -57,3 +60,6 @@ spec:
         - name: options-tracker-data
           persistentVolumeClaim:
             claimName: options-tracker-data-pvc
+        - name: ib-worker-data
+          persistentVolumeClaim:
+            claimName: ib-worker-data-pvc

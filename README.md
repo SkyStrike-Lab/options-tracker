@@ -46,6 +46,7 @@ The application can be configured via environment variables in `docker-compose.y
 
 - `ROOT_PATH`: Set this if hosting behind a reverse proxy on a non-root path (e.g., `/options`).
 - `DATABASE_URL`: Path to the SQLite database file (default: `sqlite:///./data/options.db`).
+- `IB_DATA_FILE`: Path to the IBKR portfolio/prices JSON file (default: `data/ib_data.json`).
 
 ## Data Entry Guide
 

@@ -7,3 +7,4 @@ metadata:
 data:
   DATABASE_URL: "sqlite:///./data/options.db"
   ROOT_PATH: ""
+  IB_DATA_FILE: "/app/ib-data/ib_data.json"
