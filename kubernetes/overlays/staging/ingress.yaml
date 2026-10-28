@@ -3,7 +3,8 @@ kind: Ingress
 metadata:
   name: options-tracker-ingress
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: traefik
   rules:
@@ -17,3 +18,7 @@ spec:
                 name: options-tracker
                 port:
                   number: 8000
+  tls:
+    - hosts:
+        - options-staging.rath.home
+
