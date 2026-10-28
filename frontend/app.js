@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalGroupEdit = document.getElementById('modal-group-edit');
     const modalGroupClose = document.getElementById('modal-group-close');
     const modalClose = document.getElementById('modal-close');
+    const modalRoll = document.getElementById('modal-roll');
     const btnNew = document.getElementById('btn-new-position');
     const btnAddLeg = document.getElementById('btn-add-leg');
     const legsContainer = document.getElementById('legs-container');
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formGroupEdit = document.getElementById('form-group-edit');
     const formGroupClose = document.getElementById('form-group-close');
     const formClose = document.getElementById('form-close');
+    const formRoll = document.getElementById('form-roll');
     const closeBtns = document.querySelectorAll('.close');
     const globalExpInput = document.getElementById('new-exp-date');
     const globalQtyInput = document.getElementById('new-qty');
@@ -416,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalGroupEdit.style.display = 'none';
             modalGroupClose.style.display = 'none';
             modalClose.style.display = 'none';
+            if (modalRoll) modalRoll.style.display = 'none';
         });
     });
 
@@ -667,12 +670,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     const occ = pos.occ_symbol || '';
+                    let rollBadgeHtml = '';
+                    if (pos.roll_count && pos.roll_count > 0) {
+                        const pnlSign = (pos.campaign_realized_pnl || 0) >= 0 ? '+' : '';
+                        const pnlText = `Campaign Realized: ${pnlSign}${formatCurrency(pos.campaign_realized_pnl || 0)}`;
+                        rollBadgeHtml = `<span class="badge-roll" title="${pnlText}">Roll #${pos.roll_count}</span>`;
+                    }
                     legsHtml += `
                         <div style="margin-bottom: 6px;">
                             <div class="strategy-leg-item">
                                 <span class="${typeClass}">[${pos.initial_type}]</span>
                                 <span class="leg-qty">${qtyDisplay} x</span>
                                 <span class="leg-contract-name" title="OCC Symbol: ${occ}">${pos.contract_name}</span>
+                                ${rollBadgeHtml}
                                 <span class="leg-date">(${dateOpenedStr})</span>
                                 ${ibLegInfoHtml}
                                 ${mobileRiskStatusHtml}
@@ -764,6 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     actionsHtml = `
                         <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
                         <button class="btn-icon" title="Edit Position" onclick="openEditModal(${firstPos.id})">✏️</button>
+                        <button class="btn-icon" title="Roll Position" onclick="openRollModal(${firstPos.id})">🔄</button>
                         <button class="btn-icon" title="Close Position" onclick="openCloseModal(${firstPos.id}, '${firstPos.initial_type}', ${firstPos.current_quantity})">✅</button>
                         <button class="btn-icon" title="Delete Position" onclick="deletePosition(${firstPos.id})">❌</button>
                     `;
@@ -820,6 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">
                                 ${pos.initial_type} ${pos.current_quantity}x ${pos.contract_name}
                                 <span style="font-size: 0.8rem; font-family: monospace; color: #64748b; margin-left: 10px;">(${occ})</span>
+                                <button class="btn-icon-small" title="Roll this leg" onclick="openRollModal(${pos.id})">🔄 Roll</button>
                             </div>
                             <div style="display: flex; gap: 20px; font-size: 0.9rem;">
                                 <div style="flex: 1;">
@@ -840,6 +852,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 });
                 
+                let campaignBannerHtml = '';
+                if ((firstPos.campaign_realized_pnl && firstPos.campaign_realized_pnl !== 0) || (firstPos.roll_count && firstPos.roll_count > 0)) {
+                    const cSign = (firstPos.campaign_realized_pnl || 0) >= 0 ? '+' : '';
+                    const cClass = (firstPos.campaign_realized_pnl || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+                    campaignBannerHtml = `
+                        <div class="campaign-summary-banner">
+                            <div>
+                                <span>🔄 Campaign Tracking (Roll #${firstPos.roll_count || 0})</span>
+                            </div>
+                            <div>
+                                <span>Realized P&L so far: </span>
+                                <span class="campaign-summary-pnl ${cClass}">${cSign}${formatCurrency(firstPos.campaign_realized_pnl || 0)}</span>
+                                <a href="details?group_id=${firstPos.group_id}" target="_blank" class="btn-icon-small" title="View Full Campaign History">History &rarr;</a>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 detailsTr.innerHTML = `
                     <td colspan="6">
                         <div class="details-content-v2" style="background: rgba(255, 255, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin: 5px 0;">
@@ -850,6 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="drawer-legs-container">
                                 ${detailsLegsHtml}
                             </div>
+                            ${campaignBannerHtml}
                         </div>
                     </td>
                 `;
@@ -891,10 +922,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dateClosed = closeTrans ? formatDate(closeTrans.date) : '-';
                     
                     const occ = pos.occ_symbol || '';
+                    let rollBadgeHtml = '';
+                    if (pos.roll_count && pos.roll_count > 0) {
+                        rollBadgeHtml = `<span class="badge-roll" title="Roll #${pos.roll_count}">Roll #${pos.roll_count}</span>`;
+                    }
                     legsHtml += `
                         <div class="strategy-leg-item">
                             <span class="${typeClass}">[${closeType}]</span>
                             <span class="leg-contract-name" style="color: #38bdf8; font-weight: 500;" title="OCC Symbol: ${occ}">${pos.contract_name}</span>
+                            ${rollBadgeHtml}
                             <span class="leg-date-range">(${dateOpened} to ${dateClosed})</span>
                         </div>
                     `;
@@ -985,12 +1021,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 });
                 
+                let campaignBannerHtml = '';
+                if ((firstPos.campaign_realized_pnl && firstPos.campaign_realized_pnl !== 0) || (firstPos.roll_count && firstPos.roll_count > 0)) {
+                    const cSign = (firstPos.campaign_realized_pnl || 0) >= 0 ? '+' : '';
+                    const cClass = (firstPos.campaign_realized_pnl || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+                    campaignBannerHtml = `
+                        <div class="campaign-summary-banner">
+                            <div>
+                                <span>🔄 Campaign Tracking (Roll #${firstPos.roll_count || 0})</span>
+                            </div>
+                            <div>
+                                <span>Total Campaign Realized P&L: </span>
+                                <span class="campaign-summary-pnl ${cClass}">${cSign}${formatCurrency(firstPos.campaign_realized_pnl || 0)}</span>
+                                <a href="details?group_id=${firstPos.group_id}" target="_blank" class="btn-icon-small" title="View Full Campaign History">History &rarr;</a>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 detailsTr.innerHTML = `
                     <td colspan="4">
                         <div class="details-content-v2" style="background: rgba(255, 255, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin: 5px 0;">
                             <div class="drawer-legs-container">
                                 ${detailsLegsHtml}
                             </div>
+                            ${campaignBannerHtml}
                         </div>
                     </td>
                 `;
@@ -1366,6 +1421,142 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPositions(currentStatus);
         }
     });
+
+    // Roll Position Modal logic
+    window.openRollModal = (id) => {
+        const pos = allPositions.find(p => p.id === parseInt(id));
+        if (!pos) return;
+
+        document.getElementById('roll-pos-id').value = pos.id;
+        document.getElementById('roll-info-summary').innerHTML = `
+            <span class="roll-summary-badge">${pos.symbol}</span>
+            Rolling <strong>${pos.contract_name}</strong> (${pos.current_quantity}x) &bull; Current: Roll #${pos.roll_count || 0}
+        `;
+        document.getElementById('roll-date').valueAsDate = new Date();
+
+        const defaultCloseType = (pos.initial_type === 'STO') ? 'BTC' : 'STC';
+        const rollCloseTypeSelect = document.getElementById('roll-close-type');
+        rollCloseTypeSelect.value = defaultCloseType;
+
+        const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) ? pos.ib_current_price : '';
+        document.getElementById('roll-close-price').value = defaultClosePrice;
+        document.getElementById('roll-close-commission').value = '0.00';
+
+        const expDate = pos.expiration_date ? pos.expiration_date.split('T')[0] : '';
+        document.getElementById('roll-new-exp').value = expDate;
+        document.getElementById('roll-new-strike').value = pos.strike_price || '';
+        document.getElementById('roll-new-cp').value = pos.call_put || 'Put';
+        document.getElementById('roll-new-type').value = pos.initial_type || 'STO';
+        document.getElementById('roll-new-price').value = '';
+        document.getElementById('roll-new-commission').value = '0.00';
+
+        calculateRollTotals();
+        if (modalRoll) modalRoll.style.display = 'block';
+    };
+
+    const rollClosePriceInput = document.getElementById('roll-close-price');
+    const rollCloseCommInput = document.getElementById('roll-close-commission');
+    const rollCloseTotalInput = document.getElementById('roll-close-total');
+    const rollCloseTypeSelect = document.getElementById('roll-close-type');
+    const rollNewPriceInput = document.getElementById('roll-new-price');
+    const rollNewCommInput = document.getElementById('roll-new-commission');
+    const rollNewTotalInput = document.getElementById('roll-new-total');
+    const rollNewTypeSelect = document.getElementById('roll-new-type');
+    const rollNetDiffInput = document.getElementById('roll-net-diff');
+
+    const calculateRollTotals = () => {
+        const id = document.getElementById('roll-pos-id').value;
+        const pos = allPositions.find(p => p.id === parseInt(id));
+        const multiplier = pos ? (pos.multiplier || 100) : 100;
+        const qty = pos ? (pos.current_quantity || 1) : 1;
+
+        const closePrice = parseFloat(rollClosePriceInput.value) || 0;
+        const closeComm = parseFloat(rollCloseCommInput.value) || 0;
+        const isCloseBuy = rollCloseTypeSelect.value === 'BTC';
+        let closeTotal = 0;
+        if (rollClosePriceInput.value !== '') {
+            const gross = qty * closePrice * multiplier;
+            closeTotal = isCloseBuy ? -(gross + closeComm) : (gross - closeComm);
+            rollCloseTotalInput.value = closeTotal.toFixed(2);
+        } else {
+            rollCloseTotalInput.value = '';
+        }
+
+        const newPrice = parseFloat(rollNewPriceInput.value) || 0;
+        const newComm = parseFloat(rollNewCommInput.value) || 0;
+        const isOpenBuy = rollNewTypeSelect.value === 'BTO';
+        let newTotal = 0;
+        if (rollNewPriceInput.value !== '') {
+            const gross = qty * newPrice * multiplier;
+            newTotal = isOpenBuy ? -(gross + newComm) : (gross - newComm);
+            rollNewTotalInput.value = newTotal.toFixed(2);
+        } else {
+            rollNewTotalInput.value = '';
+        }
+
+        if (rollCloseTotalInput.value !== '' && rollNewTotalInput.value !== '') {
+            const netDiff = closeTotal + newTotal;
+            const sign = netDiff >= 0 ? '+' : '';
+            const desc = netDiff >= 0 ? 'Net Credit' : 'Net Debit';
+            rollNetDiffInput.value = `${sign}$${Math.abs(netDiff).toFixed(2)} (${desc})`;
+        } else {
+            rollNetDiffInput.value = '-';
+        }
+    };
+
+    [rollClosePriceInput, rollCloseCommInput, rollCloseTypeSelect, rollNewPriceInput, rollNewCommInput, rollNewTypeSelect].forEach(el => {
+        if (el) {
+            el.addEventListener('input', calculateRollTotals);
+            el.addEventListener('change', calculateRollTotals);
+        }
+    });
+
+    if (formRoll) {
+        formRoll.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('roll-pos-id').value;
+            const closeDate = document.getElementById('roll-date').value;
+            const newExp = document.getElementById('roll-new-exp').value;
+            if (!closeDate || !newExp) {
+                alert('Please provide both roll date and new expiration date.');
+                return;
+            }
+
+            const data = {
+                date: closeDate + "T00:00:00",
+                close_transaction_type: rollCloseTypeSelect.value,
+                close_price: parseFloat(rollClosePriceInput.value),
+                close_commission: parseFloat(rollCloseCommInput.value) || 0,
+                close_total_usd: rollCloseTotalInput.value !== '' ? parseFloat(rollCloseTotalInput.value) : null,
+                new_expiration_date: newExp + "T00:00:00",
+                new_strike_price: parseFloat(document.getElementById('roll-new-strike').value),
+                new_call_put: document.getElementById('roll-new-cp').value,
+                new_transaction_type: rollNewTypeSelect.value,
+                new_option_price: parseFloat(rollNewPriceInput.value),
+                new_commission: parseFloat(rollNewCommInput.value) || 0,
+                new_total_usd: rollNewTotalInput.value !== '' ? parseFloat(rollNewTotalInput.value) : null
+            };
+
+            try {
+                const response = await fetch(`api/positions/${id}/roll`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    if (modalRoll) modalRoll.style.display = 'none';
+                    formRoll.reset();
+                    loadPositions(currentStatus);
+                } else {
+                    const err = await response.json();
+                    alert(`Error rolling position: ${err.detail || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('Failed to roll position:', err);
+                alert(`Network error rolling position: ${err.message}`);
+            }
+        });
+    }
 
     function calculateGroupEditMaxLoss() {
         const overrideCheckbox = document.getElementById('edit-group-override-max-loss');

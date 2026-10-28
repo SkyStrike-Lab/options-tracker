@@ -1,5 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from . import models, schemas
 from datetime import datetime
 import uuid
@@ -11,7 +12,17 @@ def get_positions(db: Session, status: str = None):
     query = db.query(models.Position)
     if status:
         query = query.filter(models.Position.status == status)
-    return query.all()
+    positions = query.all()
+    campaign_pnls = dict(
+        db.query(models.Position.campaign_id, func.sum(models.Position.realized_pnl_usd))
+        .filter(models.Position.status == "Closed", models.Position.campaign_id != None)
+        .group_by(models.Position.campaign_id)
+        .all()
+    )
+    for p in positions:
+        cid = p.campaign_id or p.group_id
+        p.campaign_realized_pnl = campaign_pnls.get(cid, 0.0)
+    return positions
 
 def recalculate_position(db: Session, position_id: int):
     logger.debug("Recalculating position ID %s", position_id)
@@ -61,6 +72,8 @@ def create_positions_batch(db: Session, batch: schemas.PositionCreateBatch):
 
         db_position = models.Position(
             group_id=group_id,
+            campaign_id=group_id,
+            roll_count=0,
             symbol=batch.symbol,
             date_opened=batch.date_opened,
             expiration_date=batch.expiration_date,
@@ -337,8 +350,28 @@ def ingest_transaction_batch(db: Session, request: schemas.IngestRequest) -> sch
                 gross = qty * leg.option_price * multiplier
                 total_usd = -(gross + leg.commission) if is_buy else (gross - leg.commission)
 
+            # Check if matching closed position exists in this batch or via explicit rolled_from_id
+            matching_closed = None
+            if legs_to_close:
+                for item in results:
+                    if item.action_taken == "CLOSED" and item.position:
+                        if item.position.symbol == (leg_symbol or group_symbol):
+                            matching_closed = item.position
+                            break
+            if not matching_closed and getattr(request, 'rolled_from_id', None):
+                matching_closed = db.query(models.Position).filter(models.Position.id == request.rolled_from_id).first()
+
+            campaign_id = request.campaign_id if getattr(request, 'campaign_id', None) else (
+                (matching_closed.campaign_id or matching_closed.group_id) if matching_closed else group_id
+            )
+            rolled_from_id = matching_closed.id if matching_closed else getattr(request, 'rolled_from_id', None)
+            roll_count = (matching_closed.roll_count or 0) + 1 if matching_closed else 0
+
             db_pos = models.Position(
                 group_id=group_id,
+                campaign_id=campaign_id,
+                rolled_from_id=rolled_from_id,
+                roll_count=roll_count,
                 symbol=leg_symbol or group_symbol,
                 date_opened=effective_date,
                 expiration_date=exp_date,
@@ -397,3 +430,94 @@ def ingest_transaction_batch(db: Session, request: schemas.IngestRequest) -> sch
         results=results
     )
 
+
+def roll_position(db: Session, position_id: int, roll_req: schemas.RollPositionRequest):
+    old_pos = db.query(models.Position).filter(models.Position.id == position_id).first()
+    if not old_pos:
+        raise ValueError(f"Position {position_id} not found")
+    if old_pos.status != "Open":
+        raise ValueError(f"Position {position_id} is already closed")
+    
+    qty = old_pos.current_quantity
+    is_close_buy = roll_req.close_transaction_type.upper() in ("BTC", "BTO", "BUY", "BOUGHT")
+    close_total_usd = roll_req.close_total_usd
+    if close_total_usd is None:
+        close_gross = qty * roll_req.close_price * (old_pos.multiplier or 100.0)
+        close_total_usd = -(close_gross + roll_req.close_commission) if is_close_buy else (close_gross - roll_req.close_commission)
+        
+    close_req = schemas.ClosePositionRequest(
+        date=roll_req.date,
+        transaction_type=roll_req.close_transaction_type,
+        quantity=qty,
+        option_price=roll_req.close_price,
+        commission=roll_req.close_commission,
+        total_usd=close_total_usd
+    )
+    closed_pos = close_position(db, old_pos.id, close_req)
+    
+    new_group_id = str(uuid.uuid4())
+    campaign_id = old_pos.campaign_id or old_pos.group_id
+    new_roll_count = (old_pos.roll_count or 0) + 1
+    new_cp = "Call" if roll_req.new_call_put.strip().upper().startswith("C") else "Put"
+    new_contract_name = roll_req.new_contract_name or format_contract_name(roll_req.new_expiration_date, roll_req.new_strike_price, new_cp)
+    new_occ = compute_occ_symbol(old_pos.symbol, roll_req.new_expiration_date, new_cp, roll_req.new_strike_price)
+    
+    is_open_buy = roll_req.new_transaction_type.upper() in ("BTO", "BUY", "BOUGHT")
+    new_total_usd = roll_req.new_total_usd
+    if new_total_usd is None:
+        new_gross = qty * roll_req.new_option_price * (old_pos.multiplier or 100.0)
+        new_total_usd = -(new_gross + roll_req.new_commission) if is_open_buy else (new_gross - roll_req.new_commission)
+        
+    new_pos = models.Position(
+        group_id=new_group_id,
+        campaign_id=campaign_id,
+        rolled_from_id=old_pos.id,
+        roll_count=new_roll_count,
+        symbol=old_pos.symbol,
+        date_opened=roll_req.date,
+        expiration_date=roll_req.new_expiration_date,
+        contract_name=new_contract_name,
+        strike_price=roll_req.new_strike_price,
+        call_put=new_cp,
+        initial_type=roll_req.new_transaction_type,
+        status="Open",
+        multiplier=old_pos.multiplier,
+        current_quantity=qty,
+        total_cost_usd=new_total_usd,
+        max_loss=old_pos.max_loss,
+        occ_symbol=new_occ
+    )
+    db.add(new_pos)
+    db.commit()
+    db.refresh(new_pos)
+    
+    new_tx = models.Transaction(
+        position_id=new_pos.id,
+        date=roll_req.date,
+        transaction_type=roll_req.new_transaction_type,
+        quantity=qty,
+        option_price=roll_req.new_option_price,
+        commission=roll_req.new_commission,
+        total_usd=new_total_usd
+    )
+    db.add(new_tx)
+    db.commit()
+    db.refresh(new_pos)
+    
+    return {"closed_position": closed_pos, "new_position": new_pos}
+
+def get_campaign_details(db: Session, campaign_id: str):
+    positions = db.query(models.Position).filter(
+        (models.Position.campaign_id == campaign_id) | (models.Position.group_id == campaign_id)
+    ).order_by(models.Position.date_opened.asc(), models.Position.id.asc()).all()
+    if not positions:
+        return None
+    total_realized = sum((p.realized_pnl_usd or 0.0) for p in positions if p.status == "Closed")
+    active_cost = sum((p.total_cost_usd or 0.0) for p in positions if p.status == "Open")
+    return {
+        "campaign_id": campaign_id,
+        "symbol": positions[0].symbol if positions else "",
+        "positions": positions,
+        "total_realized_pnl": total_realized,
+        "active_cost": active_cost
+    }

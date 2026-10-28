@@ -755,3 +755,106 @@ table td {
     user-select: none;
 }
 
+/* Rollover & Campaign Tracking Styles */
+.badge-roll {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #e0e7ff;
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    margin-left: 6px;
+    vertical-align: middle;
+    cursor: default;
+}
+
+.roll-info-banner {
+    background: rgba(79, 70, 229, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+}
+
+.roll-summary-badge {
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.roll-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #38bdf8;
+    margin: 16px 0 10px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-full-width {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.input-readonly {
+    background: #1e293b;
+    color: #38bdf8;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+.btn-icon-small {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #38bdf8;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-left: 6px;
+}
+
+.btn-icon-small:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+}
+
+.campaign-current-row {
+    background: rgba(99, 102, 241, 0.15) !important;
+    border-left: 3px solid #6366f1;
+}
+
+.campaign-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.campaign-summary-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+}
+
+.campaign-summary-pnl {
+    font-weight: bold;
+}
+

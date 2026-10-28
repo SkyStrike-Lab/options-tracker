@@ -191,6 +191,15 @@ def read_position(position_id: int, db: Session = Depends(get_db)):
         db_position.ib_current_price = None
         db_position.ib_unrealized_profits = None
         
+    cid = db_position.campaign_id or db_position.group_id
+    if cid:
+        from sqlalchemy import func
+        c_pnl = db.query(func.sum(models.Position.realized_pnl_usd)).filter(
+            models.Position.status == "Closed",
+            (models.Position.campaign_id == cid) | (models.Position.group_id == cid)
+        ).scalar()
+        db_position.campaign_realized_pnl = c_pnl or 0.0
+
     return db_position
 
 @app.put("/api/transactions/{transaction_id}", response_model=schemas.Transaction)
@@ -227,6 +236,23 @@ async def read_details(request: Request):
     with open(details_file, "r") as f:
         content = f.read()
     return content
+
+@app.post("/api/positions/{position_id}/roll")
+def roll_position(position_id: int, roll_req: schemas.RollPositionRequest, db: Session = Depends(get_db)):
+    try:
+        return crud.roll_position(db=db, position_id=position_id, roll_req=roll_req)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error rolling position {position_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/campaigns/{campaign_id}")
+def get_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = crud.get_campaign_details(db, campaign_id)
+    if not campaign or not campaign.get("positions"):
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return campaign
 
 if __name__ == "__main__":
     import uvicorn

@@ -48,6 +48,9 @@ class PositionCreateBatch(BaseModel):
 
 class PositionUpdate(BaseModel):
     symbol: Optional[str] = None
+    campaign_id: Optional[str] = None
+    rolled_from_id: Optional[int] = None
+    roll_count: Optional[int] = None
     date_opened: Optional[datetime] = None
     expiration_date: Optional[datetime] = None
     contract_name: Optional[str] = None
@@ -64,6 +67,10 @@ class PositionUpdate(BaseModel):
 class Position(BaseModel):
     id: int
     group_id: str
+    campaign_id: Optional[str] = None
+    rolled_from_id: Optional[int] = None
+    roll_count: int = 0
+    campaign_realized_pnl: Optional[float] = None
     date_opened: datetime
     symbol: str
     expiration_date: Optional[datetime] = None
@@ -123,6 +130,8 @@ class IngestRequest(BaseModel):
     quantity: Optional[int] = 1
     multiplier: float = 100.0
     max_loss: Optional[float] = None
+    campaign_id: Optional[str] = None
+    rolled_from_id: Optional[int] = None
     legs: List[IngestLeg]
 
 class IngestResultItem(BaseModel):
@@ -140,3 +149,21 @@ class IngestResponse(BaseModel):
     message: str
     warnings: List[str] = []
     results: List[IngestResultItem]
+
+
+class RollPositionRequest(BaseModel):
+    date: datetime
+    close_transaction_type: str # BTC or STC
+    close_price: float
+    close_commission: float = 0.0
+    close_total_usd: Optional[float] = None
+    
+    # New leg to open
+    new_expiration_date: datetime
+    new_strike_price: float
+    new_call_put: str # Call or Put
+    new_transaction_type: str # STO or BTO
+    new_option_price: float
+    new_commission: float = 0.0
+    new_total_usd: Optional[float] = None
+    new_contract_name: Optional[str] = None

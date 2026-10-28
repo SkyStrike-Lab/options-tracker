@@ -8,6 +8,9 @@ class Position(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(String, index=True) # To group legs of a spread
+    campaign_id = Column(String, index=True, nullable=True)
+    rolled_from_id = Column(Integer, ForeignKey("positions.id"), nullable=True)
+    roll_count = Column(Integer, default=0)
     date_opened = Column(DateTime, default=datetime.utcnow)
     symbol = Column(String, index=True) # e.g. AMD
     expiration_date = Column(DateTime) # Global to the group

@@ -107,6 +107,10 @@
                     <span class="stat-label">Realized P&L</span>
                     <div id="stat-realized-pnl" class="stat-value">0.00</div>
                 </div>
+                <div class="stat-card" id="card-campaign-pnl" style="display: none;">
+                    <span class="stat-label">Campaign Realized P&L</span>
+                    <div id="stat-campaign-pnl" class="stat-value">0.00</div>
+                </div>
                 <div class="stat-card" id="card-ib-pnl" style="display: none;">
                     <span class="stat-label">IB Unrealized P/L</span>
                     <div id="stat-ib-pnl" class="stat-value">0.00</div>
@@ -172,6 +176,29 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
+
+            <div id="section-campaign-history" style="display: none;">
+                <div class="section-title">
+                    <h3>Campaign Roll History (🔄)</h3>
+                    <span class="campaign-subtitle">All rolled positions in this campaign</span>
+                </div>
+                <div class="table-container">
+                    <table id="table-campaign">
+                        <thead>
+                            <tr>
+                                <th>Roll #</th>
+                                <th>Status</th>
+                                <th>Contract Name</th>
+                                <th>Opened</th>
+                                <th>Expiration</th>
+                                <th>Realized P&L / Net Cost</th>
+                                <th>View</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

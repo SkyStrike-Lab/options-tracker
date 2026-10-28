@@ -328,5 +328,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             transBody.appendChild(tr);
         });
+
+        // Campaign Tracking History
+        const campaignId = firstPos.campaign_id || firstPos.group_id;
+        async function loadCampaignHistory(cId, currentGroupId) {
+            if (!cId) return;
+            try {
+                const res = await fetch(`api/campaigns/${encodeURIComponent(cId)}`);
+                if (!res.ok) return;
+                const campaignData = await res.json();
+                const positions = campaignData.positions || [];
+                
+                const totalRealized = campaignData.total_realized_pnl || 0;
+                if (positions.length > 1 || totalRealized !== 0) {
+                    const card = document.getElementById('card-campaign-pnl');
+                    const valEl = document.getElementById('stat-campaign-pnl');
+                    const sign = totalRealized > 0 ? '+' : '';
+                    valEl.textContent = `${sign}${formatCurrency(totalRealized)}`;
+                    valEl.className = `stat-value ${totalRealized >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+                    card.style.display = 'block';
+                }
+
+                if (positions.length > 1) {
+                    const section = document.getElementById('section-campaign-history');
+                    const tbody = document.querySelector('#table-campaign tbody');
+                    tbody.innerHTML = '';
+                    
+                    positions.forEach(p => {
+                        const tr = document.createElement('tr');
+                        const isCurrent = p.group_id === currentGroupId;
+                        if (isCurrent) {
+                            tr.className = 'campaign-current-row';
+                        }
+                        
+                        const rollLabel = p.roll_count > 0 ? `Roll #${p.roll_count}` : 'Initial (0)';
+                        const statusClass = p.status === 'Open' ? 'pnl-positive' : 'pnl-negative';
+                        const pnlVal = p.status === 'Closed' ? p.realized_pnl_usd : p.total_cost_usd;
+                        const pnlSign = pnlVal > 0 ? '+' : '';
+                        const pnlClass = pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative';
+                        const pnlLabel = p.status === 'Closed' ? 'Realized: ' : 'Cost: ';
+                        
+                        const viewLink = isCurrent 
+                            ? '<strong>(Current)</strong>' 
+                            : `<a href="details?group_id=${p.group_id}" class="btn-icon-small">View Details</a>`;
+
+                        tr.innerHTML = `
+                            <td data-label="Roll #"><span class="badge-roll">${rollLabel}</span></td>
+                            <td data-label="Status"><span class="${statusClass}">${p.status.toUpperCase()}</span></td>
+                            <td data-label="Contract Name">
+                                <div style="font-weight: 500;">${p.contract_name}</div>
+                                <div style="font-size: 0.8rem; font-family: monospace; color: #64748b;">${p.occ_symbol || ''}</div>
+                            </td>
+                            <td data-label="Opened">${formatDate(p.date_opened)}</td>
+                            <td data-label="Expiration">${formatDate(p.expiration_date)}</td>
+                            <td data-label="Realized P&L / Net Cost" class="${pnlClass}">${pnlLabel}${pnlSign}${formatCurrency(pnlVal)}</td>
+                            <td data-label="View">${viewLink}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    section.style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Error loading campaign history:", err);
+            }
+        }
+        loadCampaignHistory(campaignId, firstPos.group_id);
     }
 });
