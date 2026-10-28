@@ -1443,7 +1443,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const rollCloseTypeSelect = document.getElementById('roll-close-type');
         rollCloseTypeSelect.value = defaultCloseType;
 
-        const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) ? pos.ib_current_price : '';
+        const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
+            ? Number(pos.ib_current_price).toFixed(2) 
+            : '';
         document.getElementById('roll-close-price').value = defaultClosePrice;
         document.getElementById('roll-close-commission').value = '0.00';
 
@@ -1903,11 +1905,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="form-row">
                     <div class="form-group">
                         <label>Close Price</label>
-                        <input type="number" class="close-leg-price" step="0.01" required>
+                        <input type="number" class="close-leg-price" step="any" required>
                     </div>
                     <div class="form-group">
                         <label>Comm (USD)</label>
-                        <input type="number" class="close-leg-comm" step="0.01" value="0">
+                        <input type="number" class="close-leg-comm" step="any" value="0">
                     </div>
                     <div class="form-group">
                         <label>Total USD</label>
@@ -2049,7 +2051,9 @@ document.addEventListener('DOMContentLoaded', () => {
             card.dataset.multiplier = pos.multiplier || 100;
 
             const defaultCloseType = (pos.initial_type === 'STO') ? 'BTC' : 'STC';
-            const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) ? pos.ib_current_price : '';
+            const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
+            ? Number(pos.ib_current_price).toFixed(2) 
+            : '';
 
             card.innerHTML = `
                 <div class="group-roll-leg-header">
@@ -2068,11 +2072,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-group">
                         <label>Close Price ($)</label>
-                        <input type="number" class="group-roll-close-price" step="0.01" value="${defaultClosePrice}" required>
+                        <input type="number" class="group-roll-close-price" step="any" value="${defaultClosePrice}" required>
                     </div>
                     <div class="form-group">
                         <label>Close Comm ($)</label>
-                        <input type="number" class="group-roll-close-comm" step="0.01" value="0.00">
+                        <input type="number" class="group-roll-close-comm" step="any" value="0.00">
                     </div>
                     <div class="form-group">
                         <label>Close Total ($)</label>
@@ -2084,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="form-row">
                     <div class="form-group">
                         <label>New Strike ($)</label>
-                        <input type="number" class="group-roll-new-strike" step="0.5" value="${pos.strike_price || ''}" required>
+                        <input type="number" class="group-roll-new-strike" step="any" value="${pos.strike_price || ''}" required>
                     </div>
                     <div class="form-group">
                         <label>Call / Put</label>
@@ -2102,11 +2106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-group">
                         <label>New Price ($)</label>
-                        <input type="number" class="group-roll-new-price" step="0.01" placeholder="e.g. 5.50" required>
+                        <input type="number" class="group-roll-new-price" step="any" placeholder="e.g. 5.50" required>
                     </div>
                     <div class="form-group">
                         <label>New Comm ($)</label>
-                        <input type="number" class="group-roll-new-comm" step="0.01" value="0.00">
+                        <input type="number" class="group-roll-new-comm" step="any" value="0.00">
                     </div>
                     <div class="form-group">
                         <label>New Total ($)</label>
