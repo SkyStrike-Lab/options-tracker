@@ -506,6 +506,105 @@ def roll_position(db: Session, position_id: int, roll_req: schemas.RollPositionR
     
     return {"closed_position": closed_pos, "new_position": new_pos}
 
+def roll_group(db: Session, group_id: str, roll_req: schemas.RollGroupRequest):
+    old_positions = db.query(models.Position).filter(
+        models.Position.group_id == group_id,
+        models.Position.status == "Open"
+    ).all()
+    if not old_positions:
+        raise ValueError(f"No open positions found for group {group_id}")
+    
+    old_pos_map = {p.id: p for p in old_positions}
+    for leg in roll_req.legs:
+        if leg.position_id not in old_pos_map:
+            raise ValueError(f"Position {leg.position_id} does not belong to group {group_id}")
+
+    first_old = old_positions[0]
+    symbol = first_old.symbol
+    multiplier = first_old.multiplier or 100.0
+    campaign_id = first_old.campaign_id or first_old.group_id
+    new_roll_count = max((p.roll_count or 0) for p in old_positions) + 1
+    new_group_id = str(uuid.uuid4())
+    effective_max_loss = roll_req.max_loss if roll_req.max_loss is not None else first_old.max_loss
+
+    closed_positions = []
+    new_positions = []
+
+    for leg_req in roll_req.legs:
+        old_pos = old_pos_map[leg_req.position_id]
+        qty = old_pos.current_quantity
+        is_close_buy = leg_req.close_transaction_type.upper() in ("BTC", "BTO", "BUY", "BOUGHT")
+        close_total_usd = leg_req.close_total_usd
+        if close_total_usd is None:
+            close_gross = qty * leg_req.close_price * multiplier
+            close_total_usd = -(close_gross + leg_req.close_commission) if is_close_buy else (close_gross - leg_req.close_commission)
+
+        close_req = schemas.ClosePositionRequest(
+            date=roll_req.date,
+            transaction_type=leg_req.close_transaction_type,
+            quantity=qty,
+            option_price=leg_req.close_price,
+            commission=leg_req.close_commission,
+            total_usd=close_total_usd
+        )
+        closed_pos = close_position(db, old_pos.id, close_req)
+        closed_positions.append(closed_pos)
+
+        new_cp = "Call" if leg_req.new_call_put.strip().upper().startswith("C") else "Put"
+        new_contract_name = leg_req.new_contract_name or format_contract_name(roll_req.new_expiration_date, leg_req.new_strike_price, new_cp)
+        new_occ = compute_occ_symbol(symbol, roll_req.new_expiration_date, new_cp, leg_req.new_strike_price)
+
+        is_open_buy = leg_req.new_transaction_type.upper() in ("BTO", "BUY", "BOUGHT")
+        new_total_usd = leg_req.new_total_usd
+        if new_total_usd is None:
+            new_gross = qty * leg_req.new_option_price * multiplier
+            new_total_usd = -(new_gross + leg_req.new_commission) if is_open_buy else (new_gross - leg_req.new_commission)
+
+        new_pos = models.Position(
+            group_id=new_group_id,
+            campaign_id=campaign_id,
+            rolled_from_id=old_pos.id,
+            roll_count=new_roll_count,
+            symbol=symbol,
+            date_opened=roll_req.date,
+            expiration_date=roll_req.new_expiration_date,
+            contract_name=new_contract_name,
+            strike_price=leg_req.new_strike_price,
+            call_put=new_cp,
+            initial_type=leg_req.new_transaction_type,
+            status="Open",
+            multiplier=multiplier,
+            current_quantity=qty,
+            total_cost_usd=new_total_usd,
+            max_loss=effective_max_loss,
+            occ_symbol=new_occ
+        )
+        db.add(new_pos)
+        db.commit()
+        db.refresh(new_pos)
+
+        new_tx = models.Transaction(
+            position_id=new_pos.id,
+            date=roll_req.date,
+            transaction_type=leg_req.new_transaction_type,
+            quantity=qty,
+            option_price=leg_req.new_option_price,
+            commission=leg_req.new_commission,
+            total_usd=new_total_usd
+        )
+        db.add(new_tx)
+        db.commit()
+        db.refresh(new_pos)
+        new_positions.append(new_pos)
+
+    return {
+        "closed_positions": closed_positions,
+        "new_positions": new_positions,
+        "new_group_id": new_group_id,
+        "campaign_id": campaign_id,
+        "roll_count": new_roll_count
+    }
+
 def get_campaign_details(db: Session, campaign_id: str):
     positions = db.query(models.Position).filter(
         (models.Position.campaign_id == campaign_id) | (models.Position.group_id == campaign_id)

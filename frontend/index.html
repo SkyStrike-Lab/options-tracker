@@ -351,6 +351,60 @@
             </div>
         </div>
 
+        <div id="modal-group-roll" class="modal">
+            <div class="modal-content large-modal">
+                <span class="close">&times;</span>
+                <h2>Roll Strategy / Spread (🔄)</h2>
+                <div class="roll-info-banner" id="group-roll-info-summary"></div>
+                <form id="form-group-roll">
+                    <input type="hidden" id="group-roll-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Roll Date</label>
+                            <input type="date" id="group-roll-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Expiration Date</label>
+                            <input type="date" id="group-roll-exp-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Strategy Qty</label>
+                            <input type="number" id="group-roll-qty" min="1" required readonly class="input-readonly">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Risk Override ($)</label>
+                            <input type="number" id="group-roll-max-loss" step="0.01" placeholder="Optional">
+                        </div>
+                    </div>
+
+                    <div class="roll-section-title">Spread Legs to Roll</div>
+                    <div id="group-roll-legs-container">
+                        <!-- Dynamic leg entries -->
+                    </div>
+
+                    <div class="group-roll-summary-card">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Closing Net</span>
+                            <div id="group-roll-close-total" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Opening Net</span>
+                            <div id="group-roll-open-total" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Roll Impact</span>
+                            <div id="group-roll-net-diff" class="group-roll-stat-val">0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width">Execute Strategy Roll & Link Campaign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div id="modal-close" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>

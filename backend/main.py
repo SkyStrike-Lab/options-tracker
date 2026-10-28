@@ -247,6 +247,16 @@ def roll_position(position_id: int, roll_req: schemas.RollPositionRequest, db: S
         logger.error(f"Error rolling position {position_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/positions/group/{group_id}/roll")
+def roll_group(group_id: str, roll_req: schemas.RollGroupRequest, db: Session = Depends(get_db)):
+    try:
+        return crud.roll_group(db=db, group_id=group_id, roll_req=roll_req)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error rolling group {group_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/campaigns/{campaign_id}")
 def get_campaign(campaign_id: str, db: Session = Depends(get_db)):
     campaign = crud.get_campaign_details(db, campaign_id)

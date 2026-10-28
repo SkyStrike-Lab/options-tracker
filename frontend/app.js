@@ -9,17 +9,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalGroupClose = document.getElementById('modal-group-close');
     const modalClose = document.getElementById('modal-close');
     const modalRoll = document.getElementById('modal-roll');
+    const modalGroupRoll = document.getElementById('modal-group-roll');
     const btnNew = document.getElementById('btn-new-position');
     const btnAddLeg = document.getElementById('btn-add-leg');
     const legsContainer = document.getElementById('legs-container');
     const groupLegsContainer = document.getElementById('edit-group-legs-container');
     const groupCloseLegsContainer = document.getElementById('group-close-legs-container');
+    const groupRollLegsContainer = document.getElementById('group-roll-legs-container');
     const formNew = document.getElementById('form-new');
     const formEdit = document.getElementById('form-edit');
     const formGroupEdit = document.getElementById('form-group-edit');
     const formGroupClose = document.getElementById('form-group-close');
     const formClose = document.getElementById('form-close');
     const formRoll = document.getElementById('form-roll');
+    const formGroupRoll = document.getElementById('form-group-roll');
     const closeBtns = document.querySelectorAll('.close');
     const globalExpInput = document.getElementById('new-exp-date');
     const globalQtyInput = document.getElementById('new-qty');
@@ -419,6 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalGroupClose.style.display = 'none';
             modalClose.style.display = 'none';
             if (modalRoll) modalRoll.style.display = 'none';
+            if (modalGroupRoll) modalGroupRoll.style.display = 'none';
         });
     });
 
@@ -767,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     actionsHtml = `
                         <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
                         <button class="btn-icon" title="Edit Group" onclick="openGroupEditModal('${firstPos.group_id}')">✏️</button>
+                        <button class="btn-icon" title="Roll Strategy / Spread" onclick="openGroupRollModal('${firstPos.group_id}')">🔄</button>
                         <button class="btn-icon" title="Close Group" onclick="openGroupCloseModal('${firstPos.group_id}')">✅</button>
                         <button class="btn-icon" title="Delete Group" onclick="deleteGroup('${firstPos.group_id}')">❌</button>
                     `;
@@ -1545,6 +1550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (response.ok) {
                     if (modalRoll) modalRoll.style.display = 'none';
+            if (modalGroupRoll) modalGroupRoll.style.display = 'none';
                     formRoll.reset();
                     loadPositions(currentStatus);
                 } else {
@@ -1957,6 +1963,240 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("An error occurred during batch close.");
         }
     });
+
+    const calculateGroupRollTotals = () => {
+        if (!groupRollLegsContainer) return;
+        const legCards = groupRollLegsContainer.querySelectorAll('.group-roll-leg-card');
+        const qty = parseInt(document.getElementById('group-roll-qty').value) || 1;
+        
+        let totalCloseUSD = 0;
+        let totalOpenUSD = 0;
+
+        legCards.forEach(card => {
+            const multiplier = parseFloat(card.dataset.multiplier) || 100;
+            
+            // Step 1: Close
+            const closePrice = parseFloat(card.querySelector('.group-roll-close-price').value) || 0;
+            const closeComm = parseFloat(card.querySelector('.group-roll-close-comm').value) || 0;
+            const isCloseBuy = card.querySelector('.group-roll-close-type').value === 'BTC';
+            let closeTotal = 0;
+            if (card.querySelector('.group-roll-close-price').value !== '') {
+                const gross = qty * closePrice * multiplier;
+                closeTotal = isCloseBuy ? -(gross + closeComm) : (gross - closeComm);
+                card.querySelector('.group-roll-close-total').value = closeTotal.toFixed(2);
+                totalCloseUSD += closeTotal;
+            } else {
+                card.querySelector('.group-roll-close-total').value = '';
+            }
+
+            // Step 2: Open
+            const newPrice = parseFloat(card.querySelector('.group-roll-new-price').value) || 0;
+            const newComm = parseFloat(card.querySelector('.group-roll-new-comm').value) || 0;
+            const isOpenBuy = card.querySelector('.group-roll-new-type').value === 'BTO';
+            let newTotal = 0;
+            if (card.querySelector('.group-roll-new-price').value !== '') {
+                const gross = qty * newPrice * multiplier;
+                newTotal = isOpenBuy ? -(gross + newComm) : (gross - newComm);
+                card.querySelector('.group-roll-new-total').value = newTotal.toFixed(2);
+                totalOpenUSD += newTotal;
+            } else {
+                card.querySelector('.group-roll-new-total').value = '';
+            }
+        });
+
+        const closeEl = document.getElementById('group-roll-close-total');
+        const openEl = document.getElementById('group-roll-open-total');
+        const diffEl = document.getElementById('group-roll-net-diff');
+
+        if (closeEl) {
+            closeEl.textContent = `${totalCloseUSD >= 0 ? '+' : ''}${formatCurrency(totalCloseUSD)}`;
+            closeEl.className = `group-roll-stat-val ${totalCloseUSD >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+
+        if (openEl) {
+            openEl.textContent = `${totalOpenUSD >= 0 ? '+' : ''}${formatCurrency(totalOpenUSD)}`;
+            openEl.className = `group-roll-stat-val ${totalOpenUSD >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+
+        if (diffEl) {
+            const netImpact = totalCloseUSD + totalOpenUSD;
+            const desc = netImpact >= 0 ? 'Net Credit' : 'Net Debit';
+            diffEl.textContent = `${netImpact >= 0 ? '+' : ''}${formatCurrency(netImpact)} (${desc})`;
+            diffEl.className = `group-roll-stat-val ${netImpact >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+    };
+
+    window.openGroupRollModal = (groupId) => {
+        const group = allPositions.filter(p => p.group_id === groupId);
+        if (group.length === 0) return;
+
+        const firstPos = group[0];
+        document.getElementById('group-roll-id').value = groupId;
+        document.getElementById('group-roll-info-summary').innerHTML = `
+            <span class="roll-summary-badge">${firstPos.symbol}</span>
+            Rolling <strong>${group.length}-Leg Strategy</strong> (${firstPos.current_quantity}x) &bull; Current Roll Count: #${firstPos.roll_count || 0}
+        `;
+        document.getElementById('group-roll-date').valueAsDate = new Date();
+        document.getElementById('group-roll-qty').value = firstPos.current_quantity;
+        document.getElementById('group-roll-exp-date').value = firstPos.expiration_date ? firstPos.expiration_date.split('T')[0] : '';
+        document.getElementById('group-roll-max-loss').value = firstPos.max_loss || '';
+
+        groupRollLegsContainer.innerHTML = '';
+        group.forEach(pos => {
+            const card = document.createElement('div');
+            card.className = 'group-roll-leg-card';
+            card.dataset.posId = pos.id;
+            card.dataset.multiplier = pos.multiplier || 100;
+
+            const defaultCloseType = (pos.initial_type === 'STO') ? 'BTC' : 'STC';
+            const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) ? pos.ib_current_price : '';
+
+            card.innerHTML = `
+                <div class="group-roll-leg-header">
+                    <span>${pos.contract_name}</span>
+                    <span class="badge ${pos.initial_type}">Initial: ${pos.initial_type}</span>
+                </div>
+                
+                <div class="group-roll-step-sub">Step 1: Close Current Leg</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Close Action</label>
+                        <select class="group-roll-close-type">
+                            <option value="BTC" ${defaultCloseType === 'BTC' ? 'selected' : ''}>BTC (Buy to Close)</option>
+                            <option value="STC" ${defaultCloseType === 'STC' ? 'selected' : ''}>STC (Sell to Close)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Close Price ($)</label>
+                        <input type="number" class="group-roll-close-price" step="0.01" value="${defaultClosePrice}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Close Comm ($)</label>
+                        <input type="number" class="group-roll-close-comm" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Close Total ($)</label>
+                        <input type="text" class="group-roll-close-total input-readonly" readonly>
+                    </div>
+                </div>
+
+                <div class="group-roll-step-sub">Step 2: Open New Leg</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>New Strike ($)</label>
+                        <input type="number" class="group-roll-new-strike" step="0.5" value="${pos.strike_price || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Call / Put</label>
+                        <select class="group-roll-new-cp">
+                            <option value="Put" ${pos.call_put === 'Put' ? 'selected' : ''}>Put</option>
+                            <option value="Call" ${pos.call_put === 'Call' ? 'selected' : ''}>Call</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Open Action</label>
+                        <select class="group-roll-new-type">
+                            <option value="STO" ${pos.initial_type === 'STO' ? 'selected' : ''}>STO (Sell to Open)</option>
+                            <option value="BTO" ${pos.initial_type === 'BTO' ? 'selected' : ''}>BTO (Buy to Open)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>New Price ($)</label>
+                        <input type="number" class="group-roll-new-price" step="0.01" placeholder="e.g. 5.50" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Comm ($)</label>
+                        <input type="number" class="group-roll-new-comm" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>New Total ($)</label>
+                        <input type="text" class="group-roll-new-total input-readonly" readonly>
+                    </div>
+                </div>
+            `;
+
+            groupRollLegsContainer.appendChild(card);
+            card.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('input', calculateGroupRollTotals);
+                el.addEventListener('change', calculateGroupRollTotals);
+            });
+        });
+
+        calculateGroupRollTotals();
+        if (modalGroupRoll) modalGroupRoll.style.display = 'block';
+    };
+
+    if (formGroupRoll) {
+        formGroupRoll.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const groupId = document.getElementById('group-roll-id').value;
+            const rollDate = document.getElementById('group-roll-date').value;
+            const newExp = document.getElementById('group-roll-exp-date').value;
+            const maxLossVal = document.getElementById('group-roll-max-loss').value;
+
+            if (!rollDate || !newExp) {
+                alert('Please provide both roll date and new expiration date.');
+                return;
+            }
+
+            const legCards = groupRollLegsContainer.querySelectorAll('.group-roll-leg-card');
+            const legsData = [];
+            for (const card of legCards) {
+                const posId = parseInt(card.dataset.posId);
+                const closeType = card.querySelector('.group-roll-close-type').value;
+                const closePrice = parseFloat(card.querySelector('.group-roll-close-price').value);
+                const closeComm = parseFloat(card.querySelector('.group-roll-close-comm').value) || 0;
+                const closeTotal = card.querySelector('.group-roll-close-total').value;
+
+                const newStrike = parseFloat(card.querySelector('.group-roll-new-strike').value);
+                const newCp = card.querySelector('.group-roll-new-cp').value;
+                const newType = card.querySelector('.group-roll-new-type').value;
+                const newPrice = parseFloat(card.querySelector('.group-roll-new-price').value);
+                const newComm = parseFloat(card.querySelector('.group-roll-new-comm').value) || 0;
+                const newTotal = card.querySelector('.group-roll-new-total').value;
+
+                legsData.push({
+                    position_id: posId,
+                    close_transaction_type: closeType,
+                    close_price: closePrice,
+                    close_commission: closeComm,
+                    close_total_usd: closeTotal !== '' ? parseFloat(closeTotal) : null,
+                    new_strike_price: newStrike,
+                    new_call_put: newCp,
+                    new_transaction_type: newType,
+                    new_option_price: newPrice,
+                    new_commission: newComm,
+                    new_total_usd: newTotal !== '' ? parseFloat(newTotal) : null
+                });
+            }
+
+            const payload = {
+                date: rollDate + "T00:00:00",
+                new_expiration_date: newExp + "T00:00:00",
+                max_loss: maxLossVal ? parseFloat(maxLossVal) : null,
+                legs: legsData
+            };
+
+            try {
+                const response = await fetch(`api/positions/group/${groupId}/roll`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    if (modalGroupRoll) modalGroupRoll.style.display = 'none';
+                    formGroupRoll.reset();
+                    loadPositions('Open');
+                } else {
+                    const err = await response.json();
+                    alert(`Error rolling spread: ${err.detail || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('Failed to roll spread:', err);
+                alert(`Network error rolling spread: ${err.message}`);
+            }
+        });
+    }
 
     formGroupEdit.addEventListener('submit', async (e) => {
         e.preventDefault();

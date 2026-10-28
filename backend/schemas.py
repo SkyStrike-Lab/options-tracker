@@ -167,3 +167,27 @@ class RollPositionRequest(BaseModel):
     new_commission: float = 0.0
     new_total_usd: Optional[float] = None
     new_contract_name: Optional[str] = None
+
+
+class RollGroupLegItem(BaseModel):
+    position_id: int
+    close_transaction_type: str # BTC or STC
+    close_price: float
+    close_commission: float = 0.0
+    close_total_usd: Optional[float] = None
+
+    # New leg to open
+    new_strike_price: float
+    new_call_put: str # Call or Put
+    new_transaction_type: str # STO or BTO
+    new_option_price: float
+    new_commission: float = 0.0
+    new_total_usd: Optional[float] = None
+    new_contract_name: Optional[str] = None
+
+
+class RollGroupRequest(BaseModel):
+    date: datetime
+    new_expiration_date: datetime
+    max_loss: Optional[float] = None
+    legs: List[RollGroupLegItem]

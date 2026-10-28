@@ -858,3 +858,59 @@ table td {
     font-weight: bold;
 }
 
+.group-roll-summary-card {
+    display: flex;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid #6366f1;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 18px;
+}
+
+.group-roll-stat-block {
+    flex: 1;
+}
+
+.group-roll-stat-label {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.group-roll-stat-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.group-roll-leg-card {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.group-roll-leg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-weight: 600;
+}
+
+.group-roll-step-sub {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #38bdf8;
+    margin: 8px 0 4px 0;
+}
+
