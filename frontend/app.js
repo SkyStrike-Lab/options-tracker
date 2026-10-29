@@ -214,14 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
         addLegEntry();
     });
 
-    function formatContractName(expDateStr, strike, cp) {
+    function formatContractName(expDateStr, strike, cp, symbol = '') {
         if (!expDateStr || !strike || !cp) return '';
         const date = new Date(expDateStr);
         const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         const mmm = months[date.getUTCMonth()];
         const dd = String(date.getUTCDate()).padStart(2, '0');
         const yy = String(date.getUTCFullYear()).slice(-2);
-        return `${mmm} ${dd} '${yy} ${strike} ${cp}`;
+        const prefix = symbol ? `${symbol.trim()} ` : '';
+        return `${prefix}${mmm} ${dd} '${yy} ${strike} ${cp}`;
     }
 
     function setMaxLossInputState(inputEl, isOverridden) {
@@ -318,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateAllLegs() {
+        const symbol = (document.getElementById('new-symbol').value || '').trim().toUpperCase();
         legsContainer.querySelectorAll('.leg-entry').forEach(div => {
             const strikeInput = div.querySelector('.leg-strike');
             const cpSelect = div.querySelector('.leg-cp');
@@ -330,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const expDate = globalExpInput.value;
             const strike = strikeInput.value;
             const cp = cpSelect.value;
-            const autoName = formatContractName(expDate, strike, cp);
+            const autoName = formatContractName(expDate, strike, cp, symbol);
             if (autoName) contractInput.value = autoName;
 
             const qty = parseInt(globalQtyInput.value) || 0;
@@ -357,14 +359,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const symbol = e.target.value.toUpperCase().trim();
         if (symbol === 'NQ') {
             globalMultiplierInput.value = 20;
-            updateAllLegs();
         } else if (symbol === 'MNQ') {
             globalMultiplierInput.value = 2;
-            updateAllLegs();
         } else if (symbol && symbol !== 'NQ' && symbol !== 'MNQ' && globalMultiplierInput.value != 100) {
             globalMultiplierInput.value = 100;
-            updateAllLegs();
         }
+        updateAllLegs();
     });
 
     function updateLegNumbers() {
@@ -1944,7 +1944,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const strike = tr.querySelector('.leg-strike').value;
                     const cp = tr.querySelector('.leg-cp').value;
                     const expDate = document.getElementById('edit-group-exp-date').value;
-                    const autoName = formatContractName(expDate, strike, cp);
+                    const groupSymbol = (document.getElementById('edit-group-symbol')?.value || '').trim();
+                    const autoName = formatContractName(expDate, strike, cp, groupSymbol);
                     if (autoName) tr.querySelector('.leg-contract').value = autoName;
 
                     const qty = parseInt(document.getElementById('edit-group-qty').value) || 0;
@@ -1990,10 +1991,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ['edit-group-qty', 'edit-group-exp-date', 'edit-group-multiplier'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
             if (id === 'edit-group-exp-date') {
+                const groupSymbol = (document.getElementById('edit-group-symbol')?.value || '').trim();
                 groupLegsContainer.querySelectorAll('.group-leg-row').forEach(row => {
                     const strike = row.querySelector('.leg-strike').value;
                     const cp = row.querySelector('.leg-cp').value;
-                    const autoName = formatContractName(document.getElementById(id).value, strike, cp);
+                    const autoName = formatContractName(document.getElementById(id).value, strike, cp, groupSymbol);
                     if (autoName) row.querySelector('.leg-contract').value = autoName;
                 });
             }
