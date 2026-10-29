@@ -375,18 +375,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addLegEntry() {
-        const index = legsContainer.children.length;
+        const existingLegs = Array.from(legsContainer.querySelectorAll('.leg-entry'));
+        const index = existingLegs.length;
         const tr = document.createElement('tr');
         tr.className = 'leg-entry roll-leg-row';
         
         let defaultCP = 'Put';
         let defaultType = 'STO';
 
-        if (index > 0) {
-            const firstLegRow = legsContainer.children[0];
-            defaultCP = firstLegRow.querySelector('.leg-cp').value;
-            const firstType = firstLegRow.querySelector('.leg-type').value;
-            defaultType = firstType === 'STO' ? 'BTO' : 'STO';
+        // When adding subsequent legs, reverse the action of the leg directly above (e.g. STO -> BTO for Put Credit Spread)
+        if (existingLegs.length > 0) {
+            const prevLeg = existingLegs[existingLegs.length - 1];
+            const prevCP = prevLeg.querySelector('.leg-cp');
+            const prevType = prevLeg.querySelector('.leg-type');
+            defaultCP = prevCP ? prevCP.value : 'Put';
+            defaultType = (prevType && prevType.value === 'STO') ? 'BTO' : 'STO';
         }
 
         tr.innerHTML = `
@@ -423,6 +426,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
         `;
         legsContainer.appendChild(tr);
+
+        // Explicitly set select element values
+        const cpEl = tr.querySelector('.leg-cp');
+        if (cpEl) cpEl.value = defaultCP;
+        const typeEl = tr.querySelector('.leg-type');
+        if (typeEl) typeEl.value = defaultType;
 
         tr.querySelectorAll('input, select').forEach(el => {
             el.addEventListener('input', updateAllLegs);
