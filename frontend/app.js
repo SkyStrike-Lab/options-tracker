@@ -89,6 +89,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }).format(num);
     }
 
+    function getOriginalPrice(pos) {
+        if (!pos) return 0;
+        const openTrans = pos.transactions ? pos.transactions.find(t => t.transaction_type === 'BTO' || t.transaction_type === 'STO') : null;
+        if (openTrans && openTrans.option_price !== null && openTrans.option_price !== undefined) {
+            return openTrans.option_price;
+        }
+        const mult = pos.multiplier || 100;
+        const qty = pos.current_quantity || 1;
+        return Math.abs((pos.total_cost_usd || 0) / mult / qty);
+    }
+
     function getNextFriday() {
         const today = new Date();
         const dayOfWeek = today.getUTCDay(); 
@@ -1372,10 +1383,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const pos = allPositions.find(p => p.id === parseInt(id));
         if (!pos) return;
 
+        const origPrice = getOriginalPrice(pos);
+        const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
+
         document.getElementById('close-pos-id').value = pos.id;
         document.getElementById('close-info-summary').innerHTML = `
             <span class="roll-summary-badge">${pos.symbol}</span>
-            Closing <strong>${pos.contract_name}</strong> (${currentQty}x)
+            Closing <strong>${pos.contract_name}</strong> (${currentQty}x)${origPriceStr ? ` &bull; Opened @ <strong>$${origPriceStr}</strong> (${pos.initial_type})` : ''}
         `;
         document.getElementById('close-date').valueAsDate = new Date();
 
@@ -1383,8 +1397,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('close-type').value = closeType;
 
         const badgeEl = document.getElementById('close-type-badge');
-        badgeEl.textContent = closeType;
-        badgeEl.className = `badge ${closeType.toLowerCase()}`;
+        badgeEl.innerHTML = `
+            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+            <span class="roll-arrow-icon">&rarr;</span>
+            <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
+        `;
 
         document.getElementById('close-qty').value = currentQty;
         document.getElementById('close-qty').max = currentQty;
@@ -1393,7 +1410,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Number(pos.ib_current_price).toFixed(2) 
             : '';
         closePriceInput.value = defaultClosePrice;
+        closePriceInput.placeholder = origPriceStr ? `Orig: ${origPriceStr}` : '0.00';
         closeCommInput.value = "0.00";
+
+        const origTagEl = document.getElementById('close-orig-price-tag');
+        if (origTagEl) origTagEl.textContent = origPriceStr ? `(Orig: $${origPriceStr})` : '';
+        const origHintEl = document.getElementById('close-orig-price-hint');
+        if (origHintEl) origHintEl.textContent = origPriceStr ? `Orig: $${origPriceStr}` : '';
 
         calculateCloseTotal();
         modalClose.style.display = 'block';
@@ -1486,10 +1509,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const pos = allPositions.find(p => p.id === parseInt(id));
         if (!pos) return;
 
+        const origPrice = getOriginalPrice(pos);
+        const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
+
         document.getElementById('roll-pos-id').value = pos.id;
         document.getElementById('roll-info-summary').innerHTML = `
             <span class="roll-summary-badge">${pos.symbol}</span>
-            Rolling <strong>${pos.contract_name}</strong> (${pos.current_quantity}x) &bull; Current: Roll #${pos.roll_count || 0}
+            Rolling <strong>${pos.contract_name}</strong> (${pos.current_quantity}x)${origPriceStr ? ` &bull; Opened @ <strong>$${origPriceStr}</strong> (${pos.initial_type})` : ''} &bull; Current: Roll #${pos.roll_count || 0}
         `;
         document.getElementById('roll-date').valueAsDate = new Date();
 
@@ -1506,9 +1532,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('single-roll-contract-name').textContent = pos.contract_name;
         document.getElementById('single-roll-actions').innerHTML = `
-            <span class="badge ${defaultCloseType}">${defaultCloseType}</span>
-            <span>&rarr;</span>
-            <span class="badge ${defaultOpenType}">${defaultOpenType}</span>
+            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+            <span class="roll-arrow-icon">&rarr;</span>
+            <span class="badge ${defaultCloseType.toLowerCase()}">${defaultCloseType}</span>
+            <span class="roll-arrow-icon">&rarr;</span>
+            <span class="badge ${defaultOpenType.toLowerCase()}">${defaultOpenType}</span>
         `;
         document.getElementById('roll-new-cp-badge').textContent = callPut;
 
@@ -1516,7 +1544,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Number(pos.ib_current_price).toFixed(2) 
             : '';
         document.getElementById('roll-close-price').value = defaultClosePrice;
+        document.getElementById('roll-close-price').placeholder = origPriceStr ? `Orig: ${origPriceStr}` : '0.00';
         document.getElementById('roll-close-commission').value = '0.00';
+
+        const hintEl = document.getElementById('single-roll-orig-price-hint');
+        if (hintEl) hintEl.textContent = origPriceStr ? `Orig: $${origPriceStr}` : '';
 
         const expDate = pos.expiration_date ? pos.expiration_date.split('T')[0] : '';
         document.getElementById('roll-new-exp').value = expDate;
@@ -2026,18 +2058,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? Number(pos.ib_current_price).toFixed(2) 
                 : '';
 
+            const origPrice = getOriginalPrice(pos);
+            const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
+
             tr.innerHTML = `
                 <td class="col-leg">
                     <div class="roll-leg-contract">${pos.contract_name}</div>
                     <div class="roll-leg-actions">
-                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}</span>
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
                         <span class="roll-arrow-icon">&rarr;</span>
                         <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
                     </div>
                     <input type="hidden" class="close-leg-type" value="${closeType}">
                 </td>
                 <td class="col-close-price">
-                    <input type="number" class="roll-input close-leg-price" step="any" required value="${defaultClosePrice}">
+                    <input type="number" class="roll-input close-leg-price" step="any" required value="${defaultClosePrice}" placeholder="${origPriceStr ? `Orig: ${origPriceStr}` : '0.00'}">
+                    ${origPriceStr ? `<div class="roll-input-hint">Orig: $${origPriceStr}</div>` : ''}
                 </td>
                 <td class="col-close-comm">
                     <input type="number" class="roll-input close-leg-comm" step="any" value="0.00">
@@ -2219,17 +2255,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? Number(pos.ib_current_price).toFixed(2) 
                 : '';
 
+            const origPrice = getOriginalPrice(pos);
+            const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
+
             tr.innerHTML = `
                 <td class="col-leg">
                     <div class="roll-leg-contract">${pos.contract_name}</div>
                     <div class="roll-leg-actions">
-                        <span class="badge ${defaultCloseType}">${defaultCloseType}</span>
-                        <span>&rarr;</span>
-                        <span class="badge ${defaultOpenType}">${defaultOpenType}</span>
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge ${defaultCloseType.toLowerCase()}">${defaultCloseType}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge ${defaultOpenType.toLowerCase()}">${defaultOpenType}</span>
                     </div>
                 </td>
                 <td class="col-close-price">
-                    <input type="number" class="group-roll-close-price roll-input" step="any" value="${defaultClosePrice}" required>
+                    <input type="number" class="group-roll-close-price roll-input" step="any" value="${defaultClosePrice}" placeholder="${origPriceStr ? `Orig: ${origPriceStr}` : '0.00'}" required>
+                    ${origPriceStr ? `<div class="roll-input-hint">Orig: $${origPriceStr}</div>` : ''}
                 </td>
                 <td class="col-close-comm">
                     <input type="number" class="group-roll-close-comm roll-input" step="any" value="0.00">

@@ -989,6 +989,21 @@ table td {
 #table-group-close-matrix .col-close-total { width: 18%; min-width: 110px; }
 #table-group-close-matrix .col-close-pnl { width: 18%; min-width: 110px; text-align: right; }
 
+.roll-input-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 3px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.roll-tag-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: normal;
+    margin-left: 6px;
+}
+
 .roll-matrix-header-group th.col-arrow {
     background: rgba(255, 255, 255, 0.02) !important;
 }
