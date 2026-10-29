@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Fetch all positions (Open and Closed) to find the group
         const [openRes, closedRes] = await Promise.all([
-            fetch('api/positions?status=Open'),
-            fetch('api/positions?status=Closed')
+            fetch('/api/positions?status=Open'),
+            fetch('/api/positions?status=Closed')
         ]);
 
         if (!openRes.ok || !closedRes.ok) throw new Error("API failure");
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (symbols.size === 0) return;
 
         try {
-            const response = await fetch(`api/prices?symbols=${Array.from(symbols).join(',')}`);
+            const response = await fetch(`/api/prices?symbols=${Array.from(symbols).join(',')}`);
             if (!response.ok) return;
             const prices = await response.json();
 
@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         async function loadCampaignHistory(cId, currentGroupId) {
             if (!cId) return;
             try {
-                const res = await fetch(`api/campaigns/${encodeURIComponent(cId)}`);
+                const res = await fetch(`/api/campaigns/${encodeURIComponent(cId)}`);
                 if (!res.ok) return;
                 const campaignData = await res.json();
                 const positions = campaignData.positions || [];
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     card.style.display = 'block';
                 }
 
-                if (positions.length > 1) {
+                if (positions.length > 1 || (firstPos.roll_count && firstPos.roll_count > 0) || totalRealized !== 0) {
                     const section = document.getElementById('section-campaign-history');
                     const tbody = document.querySelector('#table-campaign tbody');
                     tbody.innerHTML = '';
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         
                         const viewLink = isCurrent 
                             ? '<strong>(Current)</strong>' 
-                            : `<a href="details?group_id=${p.group_id}" class="btn-icon-small">View Details</a>`;
+                            : `<a href="/details?group_id=${p.group_id}" class="btn-icon-small">View Details</a>`;
 
                         tr.innerHTML = `
                             <td data-label="Roll #"><span class="badge-roll">${rollLabel}</span></td>

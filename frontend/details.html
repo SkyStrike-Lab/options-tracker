@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strategy Details | Options Tracker</title>
     <link rel="stylesheet" href="http://yui.home/global-theme.css">
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         .details-container {
             max-width: 1200px;
@@ -69,9 +69,25 @@
         }
 
         .neg-flow { color: var(--sell-color) !important; }
+
+        @media screen and (max-width: 640px) {
+            .details-container {
+                padding: 12px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-card {
+                padding: 12px 8px;
+            }
+            .stat-value {
+                font-size: 1.2rem;
+            }
+        }
     </style>
     <script src="http://yui.home/global-nav.js" defer></script>
-    <script src="static/details.js" defer></script>
+    <script src="/static/details.js" defer></script>
 </head>
 <body>
     <div id="loading" class="loading-overlay">
