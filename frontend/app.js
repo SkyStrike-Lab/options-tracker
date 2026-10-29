@@ -1410,13 +1410,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Number(pos.ib_current_price).toFixed(2) 
             : '';
         closePriceInput.value = defaultClosePrice;
-        closePriceInput.placeholder = origPriceStr ? `Orig: ${origPriceStr}` : '0.00';
+        closePriceInput.placeholder = '0.00';
         closeCommInput.value = "0.00";
 
         const origTagEl = document.getElementById('close-orig-price-tag');
         if (origTagEl) origTagEl.textContent = origPriceStr ? `(Orig: $${origPriceStr})` : '';
-        const origHintEl = document.getElementById('close-orig-price-hint');
-        if (origHintEl) origHintEl.textContent = origPriceStr ? `Orig: $${origPriceStr}` : '';
 
         calculateCloseTotal();
         modalClose.style.display = 'block';
@@ -1544,11 +1542,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Number(pos.ib_current_price).toFixed(2) 
             : '';
         document.getElementById('roll-close-price').value = defaultClosePrice;
-        document.getElementById('roll-close-price').placeholder = origPriceStr ? `Orig: ${origPriceStr}` : '0.00';
+        document.getElementById('roll-close-price').placeholder = '0.00';
         document.getElementById('roll-close-commission').value = '0.00';
-
-        const hintEl = document.getElementById('single-roll-orig-price-hint');
-        if (hintEl) hintEl.textContent = origPriceStr ? `Orig: $${origPriceStr}` : '';
 
         const expDate = pos.expiration_date ? pos.expiration_date.split('T')[0] : '';
         document.getElementById('roll-new-exp').value = expDate;
@@ -2072,8 +2067,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="hidden" class="close-leg-type" value="${closeType}">
                 </td>
                 <td class="col-close-price">
-                    <input type="number" class="roll-input close-leg-price" step="any" required value="${defaultClosePrice}" placeholder="${origPriceStr ? `Orig: ${origPriceStr}` : '0.00'}">
-                    ${origPriceStr ? `<div class="roll-input-hint">Orig: $${origPriceStr}</div>` : ''}
+                    <input type="number" class="roll-input close-leg-price" step="any" required value="${defaultClosePrice}" placeholder="0.00">
                 </td>
                 <td class="col-close-comm">
                     <input type="number" class="roll-input close-leg-comm" step="any" value="0.00">
@@ -2270,8 +2264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td class="col-close-price">
-                    <input type="number" class="group-roll-close-price roll-input" step="any" value="${defaultClosePrice}" placeholder="${origPriceStr ? `Orig: ${origPriceStr}` : '0.00'}" required>
-                    ${origPriceStr ? `<div class="roll-input-hint">Orig: $${origPriceStr}</div>` : ''}
+                    <input type="number" class="group-roll-close-price roll-input" step="any" value="${defaultClosePrice}" placeholder="0.00" required>
                 </td>
                 <td class="col-close-comm">
                     <input type="number" class="group-roll-close-comm roll-input" step="any" value="0.00">
