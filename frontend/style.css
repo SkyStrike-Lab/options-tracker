@@ -989,6 +989,24 @@ table td {
 #table-group-close-matrix .col-close-total { width: 18%; min-width: 110px; }
 #table-group-close-matrix .col-close-pnl { width: 18%; min-width: 110px; text-align: right; }
 
+/* Table styling for New and Group Edit matrices */
+#table-new-legs td, #table-group-edit-matrix td, #table-group-edit-close-matrix td {
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+#table-new-legs input.roll-input, #table-new-legs select.roll-input,
+#table-group-edit-matrix input.roll-input, #table-group-edit-matrix select.roll-input,
+#table-group-edit-close-matrix input.roll-input, #table-group-edit-close-matrix select.roll-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    background: #1e293b;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+}
+
 .roll-input-hint {
     font-size: 0.75rem;
     color: #94a3b8;

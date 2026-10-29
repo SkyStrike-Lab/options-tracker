@@ -100,9 +100,12 @@
 
         <!-- Modals -->
         <div id="modal-new" class="modal">
-            <div class="modal-content large-modal">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
-                <h2 id="modal-new-title">New Position</h2>
+                <h2 id="modal-new-title">New Strategy / Position</h2>
+                <div class="roll-info-banner" id="new-info-summary">
+                    <span class="roll-summary-badge">NEW</span> Create New Strategy or Single Leg Position
+                </div>
                 <form id="form-new">
                     <div class="form-row">
                         <div class="form-group">
@@ -113,8 +116,6 @@
                             <label>Date Opened</label>
                             <input type="date" id="new-date" required>
                         </div>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group">
                             <label for="new-exp-date">Expiration Date</label>
                             <input type="date" id="new-exp-date" required>
@@ -129,32 +130,54 @@
                         </div>
                     </div>
 
-                    <div class="form-row" style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label style="margin-bottom: 0;">Max Loss</label>
-                                <label class="risk-override-label">
-                                    <input type="checkbox" id="new-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
+                    <div class="roll-section-title">Strategy Legs</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-new-legs">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th style="width: 45px; text-align: center;">#</th>
+                                    <th>Contract Name (Auto)</th>
+                                    <th style="width: 120px;">Strike ($)</th>
+                                    <th style="width: 95px;">C/P</th>
+                                    <th style="width: 95px;">Action</th>
+                                    <th style="width: 125px;">Price ($)</th>
+                                    <th style="width: 100px;">Comm ($)</th>
+                                    <th style="width: 120px;">Total USD</th>
+                                    <th style="width: 50px; text-align: center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="legs-container">
+                                <!-- Legs will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <button type="button" id="btn-add-leg" class="btn-secondary">+ Add Strategy Leg</button>
+                    </div>
+
+                    <div class="group-roll-summary-card" style="margin-top: 20px;">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Opening Total</span>
+                            <div id="new-net-total" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <span class="group-roll-stat-label">Max Loss</span>
+                                <label class="risk-override-label" style="font-size: 0.75rem; margin: 0;">
+                                    <input type="checkbox" id="new-override-max-loss" style="width: auto; margin: 0;"> Override
                                 </label>
                             </div>
-                            <input type="text" id="new-max-loss" class="max-loss-input-readonly" readonly>
+                            <input type="text" id="new-max-loss" class="max-loss-input-readonly group-roll-stat-val" style="width: 100%; border: none; background: transparent; text-align: center;" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Breakeven Price</label>
-                            <input type="text" id="new-breakeven" readonly style="font-weight: bold; color: var(--primary-color); background: #334155; opacity: 0.7;">
-                        </div>
-                        <div class="form-group" style="flex: 2; align-self: flex-end; font-size: 0.9rem; color: #64748b;">
-                            * Auto-calculated for Single legs and Vertical Spreads. Check "Override / Covered" to set manually.
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Breakeven Price</span>
+                            <div id="new-breakeven" class="group-roll-stat-val">0.00</div>
                         </div>
                     </div>
 
-                    <h3 id="legs-title">Legs</h3>
-                    <div id="legs-container">
-                        <!-- Legs will be added here -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width" id="btn-save-position">Save Strategy / Position</button>
                     </div>
-                    <button type="button" id="btn-add-leg" class="btn-secondary">Add Leg</button>
-                    <hr>
-                    <button type="submit" class="btn-primary" id="btn-save-position">Save Position</button>
                 </form>
             </div>
         </div>
@@ -163,26 +186,27 @@
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <h2>Edit Position</h2>
+                <div class="roll-info-banner" id="edit-info-summary"></div>
                 <form id="form-edit">
                     <input type="hidden" id="edit-pos-id">
                     <div class="form-row">
                         <div class="form-group">
                             <label>Symbol</label>
-                            <input type="text" id="edit-symbol" required>
+                            <input type="text" id="edit-symbol" required readonly class="input-readonly">
                         </div>
                         <div class="form-group">
                             <label>Date Opened</label>
                             <input type="date" id="edit-date" required>
                         </div>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group">
                             <label>Expiration Date</label>
                             <input type="date" id="edit-exp-date" required>
                         </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group">
                             <label>Net Qty</label>
-                            <input type="number" id="edit-qty" readonly style="background: #334155; opacity: 0.7;">
+                            <input type="number" id="edit-qty" readonly class="input-readonly">
                         </div>
                         <div class="form-group">
                             <label>Multiplier</label>
@@ -196,7 +220,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Strike</label>
-                            <input type="number" id="edit-strike" step="0.5" required>
+                            <input type="number" id="edit-strike" step="any" required>
                         </div>
                         <div class="form-group">
                             <label>C/P</label>
@@ -215,47 +239,50 @@
                             </select>
                         </div>
                     </div>
-                    <hr>
-                    <h3>Transactions</h3>
+                    <div class="roll-section-title">Transactions History</div>
                     <div id="edit-transactions-container">
                         <!-- Transactions will be loaded here -->
                     </div>
-                    <hr>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Total USD (Calculated)</label>
-                            <input type="text" id="edit-total-usd" readonly style="background: #334155; opacity: 0.7;">
+                    
+                    <div class="group-roll-summary-card" style="margin-top: 20px;">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Total Cost Basis</span>
+                            <div id="edit-summary-total" class="group-roll-stat-val">0.00</div>
+                            <input type="hidden" id="edit-total-usd">
                         </div>
-                        <div class="form-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label style="margin-bottom: 0;">Max Loss</label>
-                                <label class="risk-override-label">
-                                    <input type="checkbox" id="edit-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
+                        <div class="group-roll-stat-block">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <span class="group-roll-stat-label">Max Loss</span>
+                                <label class="risk-override-label" style="font-size: 0.75rem; margin: 0;">
+                                    <input type="checkbox" id="edit-override-max-loss" style="width: auto; margin: 0;"> Override
                                 </label>
                             </div>
-                            <input type="text" id="edit-max-loss" class="max-loss-input-readonly" readonly>
+                            <input type="text" id="edit-max-loss" class="max-loss-input-readonly group-roll-stat-val" style="width: 100%; border: none; background: transparent; text-align: center;" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Breakeven</label>
-                            <input type="text" id="edit-breakeven" readonly style="background: #334155; opacity: 0.7;">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Breakeven Price</span>
+                            <div id="edit-breakeven" class="group-roll-stat-val">0.00</div>
                         </div>
                     </div>
-                    <hr>
-                    <button type="submit" class="btn-primary">Update Position</button>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width">Update Position</button>
+                    </div>
                 </form>
             </div>
         </div>
 
         <div id="modal-group-edit" class="modal">
-            <div class="modal-content large-modal">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Edit Strategy / Group</h2>
+                <div class="roll-info-banner" id="group-edit-info-summary"></div>
                 <form id="form-group-edit">
                     <input type="hidden" id="edit-group-id">
                     <div class="form-row">
                         <div class="form-group">
                             <label>Symbol</label>
-                            <input type="text" id="edit-group-symbol" readonly>
+                            <input type="text" id="edit-group-symbol" readonly class="input-readonly">
                         </div>
                         <div class="form-group">
                             <label>Date Opened</label>
@@ -281,31 +308,67 @@
                         </div>
                     </div>
 
-                    <div class="form-row" style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label style="margin-bottom: 0;">Max Loss</label>
-                                <label class="risk-override-label">
-                                    <input type="checkbox" id="edit-group-override-max-loss" style="width: auto; margin: 0;"> Override / Covered
-                                </label>
-                            </div>
-                            <input type="text" id="edit-group-max-loss" class="max-loss-input-readonly" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Breakeven Price</label>
-                            <input type="text" id="edit-group-breakeven" readonly style="font-weight: bold; color: var(--primary-color); background: #334155; opacity: 0.7;">
-                        </div>
-                        <div class="form-group" style="flex: 2; align-self: flex-end; font-size: 0.9rem; color: #94a3b8;">
-                            * Unified risk for the entire group/spread. Check "Override / Covered" to set manually.
+                    <div class="roll-section-title">Strategy Opening Legs</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-group-edit-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th>Contract Name</th>
+                                    <th style="width: 120px;">Strike ($)</th>
+                                    <th style="width: 95px;">C/P</th>
+                                    <th style="width: 95px;">Action</th>
+                                    <th style="width: 125px;">Open Price ($)</th>
+                                    <th style="width: 100px;">Comm ($)</th>
+                                    <th style="width: 120px;">Total USD</th>
+                                </tr>
+                            </thead>
+                            <tbody id="edit-group-legs-container">
+                                <!-- Grouped legs will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="edit-group-closing-section" style="display: none; margin-top: 20px;">
+                        <div class="roll-section-title">Strategy Closing Transactions</div>
+                        <div class="roll-table-container">
+                            <table class="roll-matrix-table" id="table-group-edit-close-matrix">
+                                <thead>
+                                    <tr class="roll-matrix-header-group">
+                                        <th>Contract Name</th>
+                                        <th style="width: 100px;">Action</th>
+                                        <th style="width: 130px;">Close Price ($)</th>
+                                        <th style="width: 110px;">Comm ($)</th>
+                                        <th style="width: 130px;">Total USD</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="edit-group-closing-tbody"></tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <h3>Legs</h3>
-                    <div id="edit-group-legs-container">
-                        <!-- Grouped legs will be added here dynamically -->
+                    <div class="group-roll-summary-card" style="margin-top: 20px;">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Opening Total</span>
+                            <div id="edit-group-net-total" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <span class="group-roll-stat-label">Max Loss</span>
+                                <label class="risk-override-label" style="font-size: 0.75rem; margin: 0;">
+                                    <input type="checkbox" id="edit-group-override-max-loss" style="width: auto; margin: 0;"> Override
+                                </label>
+                            </div>
+                            <input type="text" id="edit-group-max-loss" class="max-loss-input-readonly group-roll-stat-val" style="width: 100%; border: none; background: transparent; text-align: center;" readonly>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Breakeven Price</span>
+                            <div id="edit-group-breakeven" class="group-roll-stat-val">0.00</div>
+                        </div>
                     </div>
-                    <hr>
-                    <button type="submit" class="btn-primary">Update Entire Group</button>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width">Update Strategy / Group</button>
+                    </div>
                 </form>
             </div>
         </div>
