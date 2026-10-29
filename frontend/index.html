@@ -352,7 +352,7 @@
         </div>
 
         <div id="modal-group-roll" class="modal">
-            <div class="modal-content large-modal">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Roll Strategy / Spread (🔄)</h2>
                 <div class="roll-info-banner" id="group-roll-info-summary"></div>
@@ -379,8 +379,29 @@
                     </div>
 
                     <div class="roll-section-title">Spread Legs to Roll</div>
-                    <div id="group-roll-legs-container">
-                        <!-- Dynamic leg entries -->
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-group-roll-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th rowspan="2" class="col-leg">Leg &amp; Action</th>
+                                    <th colspan="3" class="header-close">Close Existing</th>
+                                    <th rowspan="2" class="col-arrow"></th>
+                                    <th colspan="4" class="header-open">Roll Into New</th>
+                                </tr>
+                                <tr class="roll-matrix-subheaders">
+                                    <th class="col-close-price">Close Price ($)</th>
+                                    <th class="col-close-comm">Comm ($)</th>
+                                    <th class="col-close-total">Close Total</th>
+                                    <th class="col-new-strike">New Strike ($)</th>
+                                    <th class="col-new-price">New Price ($)</th>
+                                    <th class="col-new-comm">Comm ($)</th>
+                                    <th class="col-new-total">New Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="group-roll-legs-tbody">
+                                <!-- Dynamic leg rows -->
+                            </tbody>
+                        </table>
                     </div>
 
                     <div class="group-roll-summary-card">
@@ -452,85 +473,103 @@
         </div>
 
         <div id="modal-roll" class="modal">
-            <div class="modal-content large-modal">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Roll Position (🔄)</h2>
                 <div class="roll-info-banner" id="roll-info-summary"></div>
                 <form id="form-roll">
                     <input type="hidden" id="roll-pos-id">
+                    <input type="hidden" id="roll-close-type">
+                    <input type="hidden" id="roll-new-type">
+                    <input type="hidden" id="roll-new-cp">
+                    <input type="hidden" id="roll-close-total-val">
+                    <input type="hidden" id="roll-new-total-val">
                     
-                    <div class="roll-section-title">Step 1: Close Current Leg</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Roll Date</label>
                             <input type="date" id="roll-date" required>
                         </div>
                         <div class="form-group">
-                            <label>Close Action</label>
-                            <select id="roll-close-type">
-                                <option value="BTC">BTC (Buy to Close)</option>
-                                <option value="STC">STC (Sell to Close)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Close Price ($)</label>
-                            <input type="number" id="roll-close-price" step="any" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Close Comm ($)</label>
-                            <input type="number" id="roll-close-commission" step="any" value="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label>Close Total ($)</label>
-                            <input type="number" id="roll-close-total" step="any">
-                        </div>
-                    </div>
-
-                    <div class="roll-section-title">Step 2: Open New Rolled Leg</div>
-                    <div class="form-row">
-                        <div class="form-group">
                             <label>New Expiration Date</label>
                             <input type="date" id="roll-new-exp" required>
                         </div>
-                        <div class="form-group">
-                            <label>New Strike ($)</label>
-                            <input type="number" id="roll-new-strike" step="any" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Call / Put</label>
-                            <select id="roll-new-cp">
-                                <option value="Put">Put</option>
-                                <option value="Call">Call</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Open Action</label>
-                            <select id="roll-new-type">
-                                <option value="STO">STO (Sell to Open)</option>
-                                <option value="BTO">BTO (Buy to Open)</option>
-                            </select>
-                        </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>New Option Price ($)</label>
-                            <input type="number" id="roll-new-price" step="any" required>
+
+                    <div class="roll-section-title">Leg to Roll</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-single-roll-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th rowspan="2" class="col-leg">Leg &amp; Action</th>
+                                    <th colspan="3" class="header-close">Close Existing</th>
+                                    <th rowspan="2" class="col-arrow"></th>
+                                    <th colspan="4" class="header-open">Roll Into New</th>
+                                </tr>
+                                <tr class="roll-matrix-subheaders">
+                                    <th class="col-close-price">Close Price ($)</th>
+                                    <th class="col-close-comm">Comm ($)</th>
+                                    <th class="col-close-total">Close Total</th>
+                                    <th class="col-new-strike">New Strike ($)</th>
+                                    <th class="col-new-price">New Price ($)</th>
+                                    <th class="col-new-comm">Comm ($)</th>
+                                    <th class="col-new-total">New Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="single-roll-row" class="roll-leg-row">
+                                    <td class="col-leg">
+                                        <div id="single-roll-contract-name" class="roll-leg-contract"></div>
+                                        <div id="single-roll-actions" class="roll-leg-actions"></div>
+                                    </td>
+                                    <td class="col-close-price">
+                                        <input type="number" id="roll-close-price" class="roll-input" step="any" required>
+                                    </td>
+                                    <td class="col-close-comm">
+                                        <input type="number" id="roll-close-commission" class="roll-input" step="any" value="0.00">
+                                    </td>
+                                    <td class="col-close-total">
+                                        <span id="roll-close-total" class="roll-total-val">-</span>
+                                    </td>
+                                    <td class="col-arrow">
+                                        <span class="roll-arrow-icon">&rarr;</span>
+                                    </td>
+                                    <td class="col-new-strike">
+                                        <div class="roll-strike-wrapper">
+                                            <input type="number" id="roll-new-strike" class="roll-input" step="any" required>
+                                            <span id="roll-new-cp-badge" class="roll-cp-badge"></span>
+                                        </div>
+                                    </td>
+                                    <td class="col-new-price">
+                                        <input type="number" id="roll-new-price" class="roll-input" step="any" placeholder="0.00" required>
+                                    </td>
+                                    <td class="col-new-comm">
+                                        <input type="number" id="roll-new-commission" class="roll-input" step="any" value="0.00">
+                                    </td>
+                                    <td class="col-new-total">
+                                        <span id="roll-new-total" class="roll-total-val">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="group-roll-summary-card">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Closing Net</span>
+                            <div id="roll-summary-close-total" class="group-roll-stat-val">0.00</div>
                         </div>
-                        <div class="form-group">
-                            <label>New Comm ($)</label>
-                            <input type="number" id="roll-new-commission" step="any" value="0.00">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Opening Net</span>
+                            <div id="roll-summary-open-total" class="group-roll-stat-val">0.00</div>
                         </div>
-                        <div class="form-group">
-                            <label>New Total ($)</label>
-                            <input type="number" id="roll-new-total" step="any">
-                        </div>
-                        <div class="form-group">
-                            <label>Net Roll Impact</label>
-                            <input type="text" id="roll-net-diff" readonly class="input-readonly">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Roll Impact</span>
+                            <div id="roll-net-diff" class="group-roll-stat-val">0.00</div>
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="margin-top: 20px;">
                         <button type="submit" class="btn-primary btn-full-width">Execute Roll & Link Campaign</button>
                     </div>
                 </form>

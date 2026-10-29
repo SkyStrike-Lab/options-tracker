@@ -311,6 +311,11 @@ table tfoot {
     max-width: 95%;
 }
 
+.roll-modal {
+    width: 1200px !important;
+    max-width: 96% !important;
+}
+
 .form-row {
     display: flex;
     gap: 15px;
@@ -887,30 +892,191 @@ table td {
     font-weight: 700;
 }
 
-.group-roll-leg-card {
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+/* Roll Matrix Table Layout */
+.roll-table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 14px;
+    background: rgba(15, 23, 42, 0.4);
 }
 
-.group-roll-leg-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.modal .roll-matrix-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 0.88rem;
+    min-width: 1040px;
+    table-layout: fixed;
+}
+
+.modal .roll-matrix-table thead {
+    display: table-header-group !important;
+}
+
+.modal .roll-matrix-table tbody {
+    display: table-row-group !important;
+}
+
+.modal .roll-matrix-table tr {
+    display: table-row !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.modal .roll-matrix-table th,
+.modal .roll-matrix-table td {
+    display: table-cell !important;
+    padding: 8px 8px !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-sizing: border-box;
+}
+
+.modal .roll-matrix-table td::before {
+    display: none !important;
+    content: none !important;
+}
+
+.roll-matrix-header-group th {
+    padding: 6px 8px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.78rem;
+}
+
+.roll-matrix-header-group th.header-close {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #fca5a5 !important;
+    text-align: center;
+    border-bottom: 1px solid rgba(239, 68, 68, 0.3) !important;
     font-weight: 600;
 }
 
-.group-roll-step-sub {
-    font-size: 0.78rem;
-    font-weight: 700;
+.roll-matrix-header-group th.header-open {
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: #86efac !important;
+    text-align: center;
+    border-bottom: 1px solid rgba(34, 197, 94, 0.3) !important;
+    font-weight: 600;
+}
+
+.roll-matrix-header-group th.col-leg,
+.roll-matrix-table td.col-leg {
+    text-align: left;
+    padding-left: 12px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    width: 21%;
+    min-width: 170px;
+}
+
+.roll-matrix-table .col-close-price { width: 11%; min-width: 95px; }
+.roll-matrix-table .col-close-comm { width: 8%; min-width: 70px; }
+.roll-matrix-table .col-close-total { width: 10%; min-width: 90px; }
+.roll-matrix-table .col-arrow { width: 3%; min-width: 28px; text-align: center; }
+.roll-matrix-table .col-new-strike { width: 16%; min-width: 140px; }
+.roll-matrix-table .col-new-price { width: 11%; min-width: 95px; }
+.roll-matrix-table .col-new-comm { width: 8%; min-width: 70px; }
+.roll-matrix-table .col-new-total { width: 12%; min-width: 95px; }
+
+.roll-matrix-header-group th.col-arrow {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.roll-matrix-subheaders th {
+    font-size: 0.72rem !important;
+    color: #94a3b8 !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #38bdf8;
-    margin: 8px 0 4px 0;
+    padding: 7px 8px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    text-align: right;
+}
+
+.roll-matrix-subheaders th.col-new-strike {
+    text-align: center !important;
+}
+
+.roll-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 8px;
+    font-size: 0.88rem;
+    font-family: monospace;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: #1e293b;
+    color: #ffffff;
+    text-align: right;
+    transition: border-color 0.2s;
+}
+
+.roll-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.roll-strike-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.roll-strike-wrapper .roll-input {
+    flex: 1;
+    min-width: 75px;
+    text-align: right;
+}
+
+.roll-cp-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 4px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.roll-total-val {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    text-align: right;
+    display: block;
+    padding-right: 4px;
+}
+
+.roll-arrow-icon {
+    color: #64748b;
+    font-size: 1.1rem;
+    text-align: center;
+    display: block;
+}
+
+.roll-leg-contract {
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
+    font-size: 0.88rem;
+    white-space: normal;
+    word-break: break-word;
+    padding-left: 4px;
+}
+
+.roll-leg-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    padding-left: 4px;
 }
 

@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const legsContainer = document.getElementById('legs-container');
     const groupLegsContainer = document.getElementById('edit-group-legs-container');
     const groupCloseLegsContainer = document.getElementById('group-close-legs-container');
-    const groupRollLegsContainer = document.getElementById('group-roll-legs-container');
+    const groupRollLegsTbody = document.getElementById('group-roll-legs-tbody');
     const formNew = document.getElementById('form-new');
     const formEdit = document.getElementById('form-edit');
     const formGroupEdit = document.getElementById('form-group-edit');
@@ -1439,9 +1439,24 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.getElementById('roll-date').valueAsDate = new Date();
 
+        // Rule 1: Close is always reverse of initial
         const defaultCloseType = (pos.initial_type === 'STO') ? 'BTC' : 'STC';
-        const rollCloseTypeSelect = document.getElementById('roll-close-type');
-        rollCloseTypeSelect.value = defaultCloseType;
+        // Rule 2: Open is always reverse of close
+        const defaultOpenType = (defaultCloseType === 'BTC') ? 'STO' : 'BTO';
+        // Rule 3: Call/Put never changes
+        const callPut = pos.call_put || 'Put';
+
+        document.getElementById('roll-close-type').value = defaultCloseType;
+        document.getElementById('roll-new-type').value = defaultOpenType;
+        document.getElementById('roll-new-cp').value = callPut;
+
+        document.getElementById('single-roll-contract-name').textContent = pos.contract_name;
+        document.getElementById('single-roll-actions').innerHTML = `
+            <span class="badge ${defaultCloseType}">${defaultCloseType}</span>
+            <span>&rarr;</span>
+            <span class="badge ${defaultOpenType}">${defaultOpenType}</span>
+        `;
+        document.getElementById('roll-new-cp-badge').textContent = callPut;
 
         const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
             ? Number(pos.ib_current_price).toFixed(2) 
@@ -1452,8 +1467,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const expDate = pos.expiration_date ? pos.expiration_date.split('T')[0] : '';
         document.getElementById('roll-new-exp').value = expDate;
         document.getElementById('roll-new-strike').value = pos.strike_price || '';
-        document.getElementById('roll-new-cp').value = pos.call_put || 'Put';
-        document.getElementById('roll-new-type').value = pos.initial_type || 'STO';
         document.getElementById('roll-new-price').value = '';
         document.getElementById('roll-new-commission').value = '0.00';
 
@@ -1463,13 +1476,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const rollClosePriceInput = document.getElementById('roll-close-price');
     const rollCloseCommInput = document.getElementById('roll-close-commission');
-    const rollCloseTotalInput = document.getElementById('roll-close-total');
-    const rollCloseTypeSelect = document.getElementById('roll-close-type');
+    const rollCloseTotalEl = document.getElementById('roll-close-total');
+    const rollCloseTotalHidden = document.getElementById('roll-close-total-val');
     const rollNewPriceInput = document.getElementById('roll-new-price');
     const rollNewCommInput = document.getElementById('roll-new-commission');
-    const rollNewTotalInput = document.getElementById('roll-new-total');
-    const rollNewTypeSelect = document.getElementById('roll-new-type');
-    const rollNetDiffInput = document.getElementById('roll-net-diff');
+    const rollNewTotalEl = document.getElementById('roll-new-total');
+    const rollNewTotalHidden = document.getElementById('roll-new-total-val');
+    const rollSummaryCloseEl = document.getElementById('roll-summary-close-total');
+    const rollSummaryOpenEl = document.getElementById('roll-summary-open-total');
+    const rollNetDiffEl = document.getElementById('roll-net-diff');
 
     const calculateRollTotals = () => {
         const id = document.getElementById('roll-pos-id').value;
@@ -1477,41 +1492,71 @@ document.addEventListener('DOMContentLoaded', () => {
         const multiplier = pos ? (pos.multiplier || 100) : 100;
         const qty = pos ? (pos.current_quantity || 1) : 1;
 
+        const closeType = document.getElementById('roll-close-type').value || ((pos && pos.initial_type === 'STO') ? 'BTC' : 'STC');
+        const openType = document.getElementById('roll-new-type').value || ((closeType === 'BTC') ? 'STO' : 'BTO');
+
         const closePrice = parseFloat(rollClosePriceInput.value) || 0;
         const closeComm = parseFloat(rollCloseCommInput.value) || 0;
-        const isCloseBuy = rollCloseTypeSelect.value === 'BTC';
+        const isCloseBuy = closeType === 'BTC';
         let closeTotal = 0;
+        let hasClose = false;
         if (rollClosePriceInput.value !== '') {
             const gross = qty * closePrice * multiplier;
             closeTotal = isCloseBuy ? -(gross + closeComm) : (gross - closeComm);
-            rollCloseTotalInput.value = closeTotal.toFixed(2);
+            const sign = closeTotal >= 0 ? '+' : '';
+            rollCloseTotalEl.textContent = `${sign}${formatCurrency(closeTotal)}`;
+            rollCloseTotalEl.className = `roll-total-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            rollCloseTotalHidden.value = closeTotal.toFixed(2);
+            hasClose = true;
         } else {
-            rollCloseTotalInput.value = '';
+            rollCloseTotalEl.textContent = '-';
+            rollCloseTotalEl.className = 'roll-total-val';
+            rollCloseTotalHidden.value = '';
         }
 
         const newPrice = parseFloat(rollNewPriceInput.value) || 0;
         const newComm = parseFloat(rollNewCommInput.value) || 0;
-        const isOpenBuy = rollNewTypeSelect.value === 'BTO';
+        const isOpenBuy = openType === 'BTO';
         let newTotal = 0;
+        let hasOpen = false;
         if (rollNewPriceInput.value !== '') {
             const gross = qty * newPrice * multiplier;
             newTotal = isOpenBuy ? -(gross + newComm) : (gross - newComm);
-            rollNewTotalInput.value = newTotal.toFixed(2);
+            const sign = newTotal >= 0 ? '+' : '';
+            rollNewTotalEl.textContent = `${sign}${formatCurrency(newTotal)}`;
+            rollNewTotalEl.className = `roll-total-val ${newTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            rollNewTotalHidden.value = newTotal.toFixed(2);
+            hasOpen = true;
         } else {
-            rollNewTotalInput.value = '';
+            rollNewTotalEl.textContent = '-';
+            rollNewTotalEl.className = 'roll-total-val';
+            rollNewTotalHidden.value = '';
         }
 
-        if (rollCloseTotalInput.value !== '' && rollNewTotalInput.value !== '') {
-            const netDiff = closeTotal + newTotal;
-            const sign = netDiff >= 0 ? '+' : '';
-            const desc = netDiff >= 0 ? 'Net Credit' : 'Net Debit';
-            rollNetDiffInput.value = `${sign}$${Math.abs(netDiff).toFixed(2)} (${desc})`;
-        } else {
-            rollNetDiffInput.value = '-';
+        if (rollSummaryCloseEl) {
+            rollSummaryCloseEl.textContent = hasClose ? `${closeTotal >= 0 ? '+' : ''}${formatCurrency(closeTotal)}` : '0.00';
+            rollSummaryCloseEl.className = `group-roll-stat-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+        if (rollSummaryOpenEl) {
+            rollSummaryOpenEl.textContent = hasOpen ? `${newTotal >= 0 ? '+' : ''}${formatCurrency(newTotal)}` : '0.00';
+            rollSummaryOpenEl.className = `group-roll-stat-val ${newTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+
+        if (rollNetDiffEl) {
+            if (hasClose && hasOpen) {
+                const netDiff = closeTotal + newTotal;
+                const sign = netDiff >= 0 ? '+' : '';
+                const desc = netDiff >= 0 ? 'Net Credit' : 'Net Debit';
+                rollNetDiffEl.textContent = `${sign}${formatCurrency(netDiff)} (${desc})`;
+                rollNetDiffEl.className = `group-roll-stat-val ${netDiff >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            } else {
+                rollNetDiffEl.textContent = '-';
+                rollNetDiffEl.className = 'group-roll-stat-val';
+            }
         }
     };
 
-    [rollClosePriceInput, rollCloseCommInput, rollCloseTypeSelect, rollNewPriceInput, rollNewCommInput, rollNewTypeSelect].forEach(el => {
+    [rollClosePriceInput, rollCloseCommInput, rollNewPriceInput, rollNewCommInput].forEach(el => {
         if (el) {
             el.addEventListener('input', calculateRollTotals);
             el.addEventListener('change', calculateRollTotals);
@@ -1529,19 +1574,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const closeTotalVal = rollCloseTotalHidden.value;
+            const newTotalVal = rollNewTotalHidden.value;
+
             const data = {
                 date: closeDate + "T00:00:00",
-                close_transaction_type: rollCloseTypeSelect.value,
+                close_transaction_type: document.getElementById('roll-close-type').value,
                 close_price: parseFloat(rollClosePriceInput.value),
                 close_commission: parseFloat(rollCloseCommInput.value) || 0,
-                close_total_usd: rollCloseTotalInput.value !== '' ? parseFloat(rollCloseTotalInput.value) : null,
+                close_total_usd: closeTotalVal !== '' ? parseFloat(closeTotalVal) : null,
                 new_expiration_date: newExp + "T00:00:00",
                 new_strike_price: parseFloat(document.getElementById('roll-new-strike').value),
                 new_call_put: document.getElementById('roll-new-cp').value,
-                new_transaction_type: rollNewTypeSelect.value,
+                new_transaction_type: document.getElementById('roll-new-type').value,
                 new_option_price: parseFloat(rollNewPriceInput.value),
                 new_commission: parseFloat(rollNewCommInput.value) || 0,
-                new_total_usd: rollNewTotalInput.value !== '' ? parseFloat(rollNewTotalInput.value) : null
+                new_total_usd: newTotalVal !== '' ? parseFloat(newTotalVal) : null
             };
 
             try {
@@ -1552,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (response.ok) {
                     if (modalRoll) modalRoll.style.display = 'none';
-            if (modalGroupRoll) modalGroupRoll.style.display = 'none';
+                    if (modalGroupRoll) modalGroupRoll.style.display = 'none';
                     formRoll.reset();
                     loadPositions(currentStatus);
                 } else {
@@ -1967,42 +2015,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const calculateGroupRollTotals = () => {
-        if (!groupRollLegsContainer) return;
-        const legCards = groupRollLegsContainer.querySelectorAll('.group-roll-leg-card');
+        if (!groupRollLegsTbody) return;
+        const legRows = groupRollLegsTbody.querySelectorAll('.group-roll-leg-row');
         const qty = parseInt(document.getElementById('group-roll-qty').value) || 1;
         
         let totalCloseUSD = 0;
         let totalOpenUSD = 0;
 
-        legCards.forEach(card => {
-            const multiplier = parseFloat(card.dataset.multiplier) || 100;
+        legRows.forEach(row => {
+            const multiplier = parseFloat(row.dataset.multiplier) || 100;
+            const closeType = row.dataset.closeType;
+            const openType = row.dataset.openType;
             
-            // Step 1: Close
-            const closePrice = parseFloat(card.querySelector('.group-roll-close-price').value) || 0;
-            const closeComm = parseFloat(card.querySelector('.group-roll-close-comm').value) || 0;
-            const isCloseBuy = card.querySelector('.group-roll-close-type').value === 'BTC';
+            // Close calculation
+            const closePriceInput = row.querySelector('.group-roll-close-price');
+            const closeCommInput = row.querySelector('.group-roll-close-comm');
+            const closeTotalEl = row.querySelector('.group-roll-close-total');
+            const closePrice = parseFloat(closePriceInput.value) || 0;
+            const closeComm = parseFloat(closeCommInput.value) || 0;
+            const isCloseBuy = closeType === 'BTC';
+
             let closeTotal = 0;
-            if (card.querySelector('.group-roll-close-price').value !== '') {
+            if (closePriceInput.value !== '') {
                 const gross = qty * closePrice * multiplier;
                 closeTotal = isCloseBuy ? -(gross + closeComm) : (gross - closeComm);
-                card.querySelector('.group-roll-close-total').value = closeTotal.toFixed(2);
+                const sign = closeTotal >= 0 ? '+' : '';
+                closeTotalEl.textContent = `${sign}${formatCurrency(closeTotal)}`;
+                closeTotalEl.className = `group-roll-close-total roll-total-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+                row.dataset.closeTotalVal = closeTotal;
                 totalCloseUSD += closeTotal;
             } else {
-                card.querySelector('.group-roll-close-total').value = '';
+                closeTotalEl.textContent = '-';
+                closeTotalEl.className = 'group-roll-close-total roll-total-val';
+                row.dataset.closeTotalVal = '';
             }
 
-            // Step 2: Open
-            const newPrice = parseFloat(card.querySelector('.group-roll-new-price').value) || 0;
-            const newComm = parseFloat(card.querySelector('.group-roll-new-comm').value) || 0;
-            const isOpenBuy = card.querySelector('.group-roll-new-type').value === 'BTO';
+            // Open calculation
+            const newPriceInput = row.querySelector('.group-roll-new-price');
+            const newCommInput = row.querySelector('.group-roll-new-comm');
+            const newTotalEl = row.querySelector('.group-roll-new-total');
+            const newPrice = parseFloat(newPriceInput.value) || 0;
+            const newComm = parseFloat(newCommInput.value) || 0;
+            const isOpenBuy = openType === 'BTO';
+
             let newTotal = 0;
-            if (card.querySelector('.group-roll-new-price').value !== '') {
+            if (newPriceInput.value !== '') {
                 const gross = qty * newPrice * multiplier;
                 newTotal = isOpenBuy ? -(gross + newComm) : (gross - newComm);
-                card.querySelector('.group-roll-new-total').value = newTotal.toFixed(2);
+                const sign = newTotal >= 0 ? '+' : '';
+                newTotalEl.textContent = `${sign}${formatCurrency(newTotal)}`;
+                newTotalEl.className = `group-roll-new-total roll-total-val ${newTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+                row.dataset.newTotalVal = newTotal;
                 totalOpenUSD += newTotal;
             } else {
-                card.querySelector('.group-roll-new-total').value = '';
+                newTotalEl.textContent = '-';
+                newTotalEl.className = 'group-roll-new-total roll-total-val';
+                row.dataset.newTotalVal = '';
             }
         });
 
@@ -2043,84 +2111,68 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('group-roll-exp-date').value = firstPos.expiration_date ? firstPos.expiration_date.split('T')[0] : '';
         document.getElementById('group-roll-max-loss').value = firstPos.max_loss || '';
 
-        groupRollLegsContainer.innerHTML = '';
+        groupRollLegsTbody.innerHTML = '';
         group.forEach(pos => {
-            const card = document.createElement('div');
-            card.className = 'group-roll-leg-card';
-            card.dataset.posId = pos.id;
-            card.dataset.multiplier = pos.multiplier || 100;
+            const tr = document.createElement('tr');
+            tr.className = 'group-roll-leg-row roll-leg-row';
+            tr.dataset.posId = pos.id;
+            tr.dataset.multiplier = pos.multiplier || 100;
 
+            // Rule 1: Close is always reverse of initial
             const defaultCloseType = (pos.initial_type === 'STO') ? 'BTC' : 'STC';
+            // Rule 2: Open is always reverse of close
+            const defaultOpenType = (defaultCloseType === 'BTC') ? 'STO' : 'BTO';
+            // Rule 3: Call/Put never changes
+            const callPut = pos.call_put || 'Put';
+
+            tr.dataset.closeType = defaultCloseType;
+            tr.dataset.openType = defaultOpenType;
+            tr.dataset.callPut = callPut;
+
             const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
-            ? Number(pos.ib_current_price).toFixed(2) 
-            : '';
+                ? Number(pos.ib_current_price).toFixed(2) 
+                : '';
 
-            card.innerHTML = `
-                <div class="group-roll-leg-header">
-                    <span>${pos.contract_name}</span>
-                    <span class="badge ${pos.initial_type}">Initial: ${pos.initial_type}</span>
-                </div>
-                
-                <div class="group-roll-step-sub">Step 1: Close Current Leg</div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Close Action</label>
-                        <select class="group-roll-close-type">
-                            <option value="BTC" ${defaultCloseType === 'BTC' ? 'selected' : ''}>BTC (Buy to Close)</option>
-                            <option value="STC" ${defaultCloseType === 'STC' ? 'selected' : ''}>STC (Sell to Close)</option>
-                        </select>
+            tr.innerHTML = `
+                <td class="col-leg">
+                    <div class="roll-leg-contract">${pos.contract_name}</div>
+                    <div class="roll-leg-actions">
+                        <span class="badge ${defaultCloseType}">${defaultCloseType}</span>
+                        <span>&rarr;</span>
+                        <span class="badge ${defaultOpenType}">${defaultOpenType}</span>
                     </div>
-                    <div class="form-group">
-                        <label>Close Price ($)</label>
-                        <input type="number" class="group-roll-close-price" step="any" value="${defaultClosePrice}" required>
+                </td>
+                <td class="col-close-price">
+                    <input type="number" class="group-roll-close-price roll-input" step="any" value="${defaultClosePrice}" required>
+                </td>
+                <td class="col-close-comm">
+                    <input type="number" class="group-roll-close-comm roll-input" step="any" value="0.00">
+                </td>
+                <td class="col-close-total">
+                    <span class="group-roll-close-total roll-total-val">-</span>
+                </td>
+                <td class="col-arrow">
+                    <span class="roll-arrow-icon">&rarr;</span>
+                </td>
+                <td class="col-new-strike">
+                    <div class="roll-strike-wrapper">
+                        <input type="number" class="group-roll-new-strike roll-input" step="any" value="${pos.strike_price || ''}" required>
+                        <span class="roll-cp-badge">${callPut}</span>
                     </div>
-                    <div class="form-group">
-                        <label>Close Comm ($)</label>
-                        <input type="number" class="group-roll-close-comm" step="any" value="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label>Close Total ($)</label>
-                        <input type="text" class="group-roll-close-total input-readonly" readonly>
-                    </div>
-                </div>
-
-                <div class="group-roll-step-sub">Step 2: Open New Leg</div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>New Strike ($)</label>
-                        <input type="number" class="group-roll-new-strike" step="any" value="${pos.strike_price || ''}" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Call / Put</label>
-                        <select class="group-roll-new-cp">
-                            <option value="Put" ${pos.call_put === 'Put' ? 'selected' : ''}>Put</option>
-                            <option value="Call" ${pos.call_put === 'Call' ? 'selected' : ''}>Call</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Open Action</label>
-                        <select class="group-roll-new-type">
-                            <option value="STO" ${pos.initial_type === 'STO' ? 'selected' : ''}>STO (Sell to Open)</option>
-                            <option value="BTO" ${pos.initial_type === 'BTO' ? 'selected' : ''}>BTO (Buy to Open)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>New Price ($)</label>
-                        <input type="number" class="group-roll-new-price" step="any" placeholder="e.g. 5.50" required>
-                    </div>
-                    <div class="form-group">
-                        <label>New Comm ($)</label>
-                        <input type="number" class="group-roll-new-comm" step="any" value="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label>New Total ($)</label>
-                        <input type="text" class="group-roll-new-total input-readonly" readonly>
-                    </div>
-                </div>
+                </td>
+                <td class="col-new-price">
+                    <input type="number" class="group-roll-new-price roll-input" step="any" placeholder="0.00" required>
+                </td>
+                <td class="col-new-comm">
+                    <input type="number" class="group-roll-new-comm roll-input" step="any" value="0.00">
+                </td>
+                <td class="col-new-total">
+                    <span class="group-roll-new-total roll-total-val">-</span>
+                </td>
             `;
 
-            groupRollLegsContainer.appendChild(card);
-            card.querySelectorAll('input, select').forEach(el => {
+            groupRollLegsTbody.appendChild(tr);
+            tr.querySelectorAll('input').forEach(el => {
                 el.addEventListener('input', calculateGroupRollTotals);
                 el.addEventListener('change', calculateGroupRollTotals);
             });
@@ -2143,21 +2195,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const legCards = groupRollLegsContainer.querySelectorAll('.group-roll-leg-card');
+            const legRows = groupRollLegsTbody.querySelectorAll('.group-roll-leg-row');
             const legsData = [];
-            for (const card of legCards) {
-                const posId = parseInt(card.dataset.posId);
-                const closeType = card.querySelector('.group-roll-close-type').value;
-                const closePrice = parseFloat(card.querySelector('.group-roll-close-price').value);
-                const closeComm = parseFloat(card.querySelector('.group-roll-close-comm').value) || 0;
-                const closeTotal = card.querySelector('.group-roll-close-total').value;
+            for (const row of legRows) {
+                const posId = parseInt(row.dataset.posId);
+                const closeType = row.dataset.closeType;
+                const closePrice = parseFloat(row.querySelector('.group-roll-close-price').value);
+                const closeComm = parseFloat(row.querySelector('.group-roll-close-comm').value) || 0;
+                const closeTotal = row.dataset.closeTotalVal;
 
-                const newStrike = parseFloat(card.querySelector('.group-roll-new-strike').value);
-                const newCp = card.querySelector('.group-roll-new-cp').value;
-                const newType = card.querySelector('.group-roll-new-type').value;
-                const newPrice = parseFloat(card.querySelector('.group-roll-new-price').value);
-                const newComm = parseFloat(card.querySelector('.group-roll-new-comm').value) || 0;
-                const newTotal = card.querySelector('.group-roll-new-total').value;
+                const newStrike = parseFloat(row.querySelector('.group-roll-new-strike').value);
+                const newCp = row.dataset.callPut;
+                const newType = row.dataset.openType;
+                const newPrice = parseFloat(row.querySelector('.group-roll-new-price').value);
+                const newComm = parseFloat(row.querySelector('.group-roll-new-comm').value) || 0;
+                const newTotal = row.dataset.newTotalVal;
 
                 legsData.push({
                     position_id: posId,
