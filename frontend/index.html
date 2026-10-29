@@ -311,42 +311,60 @@
         </div>
 
         <div id="modal-group-close" class="modal">
-            <div class="modal-content large-modal">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Close Strategy / Group</h2>
+                <div class="roll-info-banner" id="group-close-info-summary"></div>
                 <form id="form-group-close">
                     <input type="hidden" id="close-group-id">
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label>Close Date</label>
                             <input type="date" id="close-group-date" required>
                         </div>
                         <div class="form-group">
-                            <label>Quantity to Close</label>
-                            <input type="number" id="close-group-qty" min="1" required>
+                            <label>Strategy Qty</label>
+                            <input type="number" id="close-group-qty" min="1" required class="input-readonly" readonly>
                         </div>
                     </div>
 
-                    <div id="group-close-legs-container">
-                        <!-- Legs to close will be rendered here -->
+                    <div class="roll-section-title">Strategy Legs to Close</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-group-close-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th class="col-leg">Leg &amp; Action</th>
+                                    <th class="col-close-price">Close Price ($)</th>
+                                    <th class="col-close-comm">Comm ($)</th>
+                                    <th class="col-close-total">Close Total</th>
+                                    <th class="col-close-pnl">Est. Realized P&amp;L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="group-close-legs-tbody">
+                                <!-- Dynamic leg rows -->
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div class="form-row" style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid var(--primary-color);">
-                        <div style="flex: 1;">
-                            <span style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Net Closing Total (USD)</span>
-                            <div id="group-close-net-total" style="font-size: 1.8rem; font-weight: bold; margin-top: 5px;">0.00</div>
+                    <div class="group-roll-summary-card">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Closing Total</span>
+                            <div id="group-close-net-total" class="group-roll-stat-val">0.00</div>
                         </div>
-                        <div style="flex: 1; border-left: 1px solid var(--border-color); padding-left: 20px;">
-                            <span style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Realized P&L (Est.)</span>
-                            <div id="group-close-pnl" style="font-size: 1.8rem; font-weight: bold; margin-top: 5px;">0.00</div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Opening Cost Basis</span>
+                            <div id="group-close-open-cost" class="group-roll-stat-val">0.00</div>
                         </div>
-                        <div style="flex: 1.5; color: #94a3b8; font-size: 0.85rem; align-self: center; padding-left: 20px;">
-                            Calculated based on the difference between total opening cost and closing credit/debit.
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Est. Realized P&amp;L</span>
+                            <div id="group-close-pnl" class="group-roll-stat-val">0.00</div>
                         </div>
                     </div>
 
-                    <hr>
-                    <button type="submit" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.2rem;">Confirm Batch Close</button>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width">Close Strategy / Group</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -430,21 +448,20 @@
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <h2>Close Position</h2>
+                <div class="roll-info-banner" id="close-info-summary"></div>
                 <form id="form-close">
                     <input type="hidden" id="close-pos-id">
+                    <input type="hidden" id="close-type">
+                    <input type="hidden" id="close-total-usd">
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>Close Date</label>
                             <input type="date" id="close-date" required>
                         </div>
                         <div class="form-group">
-                            <label>Type</label>
-                            <select id="close-type">
-                                <option value="BTC">BTC</option>
-                                <option value="STC">STC</option>
-                                <option value="BTO">BTO</option>
-                                <option value="STO">STO</option>
-                            </select>
+                            <label>Closing Action</label>
+                            <div style="padding-top: 8px;"><span id="close-type-badge" class="badge"></span></div>
                         </div>
                     </div>
                     <div class="form-row">
@@ -454,20 +471,32 @@
                         </div>
                         <div class="form-group">
                             <label>Option Price</label>
-                            <input type="number" id="close-option-price" step="0.01" required>
+                            <input type="number" id="close-option-price" step="any" required>
                         </div>
-                    </div>
-                    <div class="form-row">
                         <div class="form-group">
                             <label>Commission (USD)</label>
-                            <input type="number" id="close-commission" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Total (USD)</label>
-                            <input type="number" id="close-total-usd" step="0.01" required>
+                            <input type="number" id="close-commission" step="any" value="0.00">
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">Close Position</button>
+
+                    <div class="group-roll-summary-card">
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Net Closing Total</span>
+                            <div id="close-summary-total" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Opening Cost Basis</span>
+                            <div id="close-summary-cost" class="group-roll-stat-val">0.00</div>
+                        </div>
+                        <div class="group-roll-stat-block">
+                            <span class="group-roll-stat-label">Est. Realized P&amp;L</span>
+                            <div id="close-summary-pnl" class="group-roll-stat-val">0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn-primary btn-full-width">Close Position</button>
+                    </div>
                 </form>
             </div>
         </div>

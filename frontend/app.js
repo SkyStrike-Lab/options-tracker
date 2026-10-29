@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddLeg = document.getElementById('btn-add-leg');
     const legsContainer = document.getElementById('legs-container');
     const groupLegsContainer = document.getElementById('edit-group-legs-container');
-    const groupCloseLegsContainer = document.getElementById('group-close-legs-container');
+    const groupCloseLegsContainer = document.getElementById('group-close-legs-tbody');
     const groupRollLegsTbody = document.getElementById('group-roll-legs-tbody');
     const formNew = document.getElementById('form-new');
     const formEdit = document.getElementById('form-edit');
@@ -1369,18 +1369,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.openCloseModal = (id, initialType, currentQty) => {
-        document.getElementById('close-pos-id').value = id;
-        document.getElementById('close-qty').value = currentQty;
+        const pos = allPositions.find(p => p.id === parseInt(id));
+        if (!pos) return;
+
+        document.getElementById('close-pos-id').value = pos.id;
+        document.getElementById('close-info-summary').innerHTML = `
+            <span class="roll-summary-badge">${pos.symbol}</span>
+            Closing <strong>${pos.contract_name}</strong> (${currentQty}x)
+        `;
         document.getElementById('close-date').valueAsDate = new Date();
-        document.getElementById('close-type').value = (initialType === 'BTO' || initialType === 'BTC') ? 'STC' : 'BTC';
+
+        const closeType = (initialType === 'BTO' || initialType === 'BTC') ? 'STC' : 'BTC';
+        document.getElementById('close-type').value = closeType;
+
+        const badgeEl = document.getElementById('close-type-badge');
+        badgeEl.textContent = closeType;
+        badgeEl.className = `badge ${closeType.toLowerCase()}`;
+
+        document.getElementById('close-qty').value = currentQty;
+        document.getElementById('close-qty').max = currentQty;
+
+        const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
+            ? Number(pos.ib_current_price).toFixed(2) 
+            : '';
+        closePriceInput.value = defaultClosePrice;
+        closeCommInput.value = "0.00";
+
+        calculateCloseTotal();
         modalClose.style.display = 'block';
     };
 
     const closePriceInput = document.getElementById('close-option-price');
     const closeCommInput = document.getElementById('close-commission');
     const closeUsdInput = document.getElementById('close-total-usd');
-    const closeTypeSelect = document.getElementById('close-type');
+    const closeTypeInput = document.getElementById('close-type');
     const closeQtyInput = document.getElementById('close-qty');
+    const closeSummaryTotalEl = document.getElementById('close-summary-total');
+    const closeSummaryCostEl = document.getElementById('close-summary-cost');
+    const closeSummaryPnlEl = document.getElementById('close-summary-pnl');
 
     const calculateCloseTotal = () => {
         const id = document.getElementById('close-pos-id').value;
@@ -1390,17 +1416,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const qty = parseInt(closeQtyInput.value) || 0;
         const price = parseFloat(closePriceInput.value) || 0;
         const comm = parseFloat(closeCommInput.value) || 0;
-        const type = closeTypeSelect.value;
+        const type = closeTypeInput.value;
         let total = qty * price * multiplier;
+        let closeTotal = 0;
         if (type === 'BTO' || type === 'BTC') {
-            closeUsdInput.value = (-(total + comm)).toFixed(2);
+            closeTotal = -(total + comm);
         } else {
-            closeUsdInput.value = (total - comm).toFixed(2);
+            closeTotal = total - comm;
+        }
+
+        closeUsdInput.value = closeTotal.toFixed(2);
+
+        const sign = closeTotal >= 0 ? '+' : '';
+        if (closeSummaryTotalEl) {
+            closeSummaryTotalEl.textContent = `${sign}${formatCurrency(closeTotal)}`;
+            closeSummaryTotalEl.className = `group-roll-stat-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+
+        let openingCost = 0;
+        if (pos) {
+            openingCost = (pos.total_cost_usd / pos.current_quantity) * qty;
+            if (closeSummaryCostEl) {
+                closeSummaryCostEl.textContent = formatCurrency(openingCost);
+                closeSummaryCostEl.className = 'group-roll-stat-val';
+            }
+
+            const pnl = openingCost + closeTotal;
+            const pnlSign = pnl >= 0 ? '+' : '';
+            if (closeSummaryPnlEl) {
+                closeSummaryPnlEl.textContent = `${pnlSign}${formatCurrency(pnl)}`;
+                closeSummaryPnlEl.className = `group-roll-stat-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            }
         }
     };
 
-    [closePriceInput, closeCommInput, closeTypeSelect, closeQtyInput].forEach(el => {
-        el.addEventListener('input', calculateCloseTotal);
+    [closePriceInput, closeCommInput, closeTypeInput, closeQtyInput].forEach(el => {
+        if (el) {
+            el.addEventListener('input', calculateCloseTotal);
+            el.addEventListener('change', calculateCloseTotal);
+        }
     });
 
     formClose.addEventListener('submit', async (e) => {
@@ -1885,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const calculateGroupCloseTotal = () => {
-        const legs = Array.from(groupCloseLegsContainer.querySelectorAll('.group-close-leg-row'));
+        const legRows = groupCloseLegsContainer.querySelectorAll('.group-close-leg-row');
         const qtyToClose = parseInt(document.getElementById('close-group-qty').value) || 0;
         let grandClosingTotal = 0;
         let grandOpeningCost = 0;
@@ -1894,12 +1948,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const group = allPositions.filter(p => p.group_id === groupId);
         const multiplier = group.length > 0 ? group[0].multiplier : 100;
         
-        legs.forEach(leg => {
-            const price = parseFloat(leg.querySelector('.close-leg-price').value) || 0;
-            const comm = parseFloat(leg.querySelector('.close-leg-comm').value) || 0;
-            const type = leg.querySelector('.close-leg-type').value;
+        legRows.forEach(row => {
+            const price = parseFloat(row.querySelector('.close-leg-price').value) || 0;
+            const comm = parseFloat(row.querySelector('.close-leg-comm').value) || 0;
+            const type = row.dataset.closeType;
+            const posMultiplier = parseFloat(row.dataset.multiplier) || 100;
             
-            let total = qtyToClose * price * multiplier;
+            let total = qtyToClose * price * posMultiplier;
             let legClosingTotal = 0;
             if (type === 'BTO' || type === 'BTC') {
                 legClosingTotal = -(total + comm);
@@ -1907,68 +1962,99 @@ document.addEventListener('DOMContentLoaded', () => {
                 legClosingTotal = total - comm;
             }
             
-            leg.querySelector('.close-leg-total').value = formatCurrency(legClosingTotal);
+            const sign = legClosingTotal >= 0 ? '+' : '';
+            const totalDisplayEl = row.querySelector('.close-leg-total-display');
+            const totalHiddenEl = row.querySelector('.close-leg-total');
+            const pnlDisplayEl = row.querySelector('.close-leg-pnl-display');
+
+            totalDisplayEl.textContent = `${sign}${formatCurrency(legClosingTotal)}`;
+            totalDisplayEl.className = `roll-total-val ${legClosingTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            totalHiddenEl.value = legClosingTotal.toFixed(2);
             grandClosingTotal += legClosingTotal;
 
-            const posId = parseInt(leg.dataset.posId);
+            const posId = parseInt(row.dataset.posId);
             const pos = allPositions.find(p => p.id === posId);
             if (pos) {
                 const proRatedOpeningCost = (pos.total_cost_usd / pos.current_quantity) * qtyToClose;
                 grandOpeningCost += proRatedOpeningCost;
+
+                const legPnl = proRatedOpeningCost + legClosingTotal;
+                const pnlSign = legPnl >= 0 ? '+' : '';
+                pnlDisplayEl.textContent = `${pnlSign}${formatCurrency(legPnl)}`;
+                pnlDisplayEl.className = `roll-total-val ${legPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
             }
         });
         
-        const totalEl = document.getElementById('group-close-net-total');
-        totalEl.textContent = formatCurrency(grandClosingTotal);
-        totalEl.className = grandClosingTotal >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const netTotalEl = document.getElementById('group-close-net-total');
+        netTotalEl.textContent = `${grandClosingTotal >= 0 ? '+' : ''}${formatCurrency(grandClosingTotal)}`;
+        netTotalEl.className = `group-roll-stat-val ${grandClosingTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+
+        const openCostEl = document.getElementById('group-close-open-cost');
+        openCostEl.textContent = formatCurrency(grandOpeningCost);
+        openCostEl.className = `group-roll-stat-val`;
 
         const pnl = grandOpeningCost + grandClosingTotal;
         const pnlEl = document.getElementById('group-close-pnl');
-        pnlEl.textContent = formatCurrency(pnl);
-        pnlEl.className = pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+        pnlEl.textContent = `${pnl >= 0 ? '+' : ''}${formatCurrency(pnl)}`;
+        pnlEl.className = `group-roll-stat-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
     };
 
     window.openGroupCloseModal = (groupId) => {
         const group = allPositions.filter(p => p.group_id === groupId);
         if (group.length === 0) return;
 
+        const firstPos = group[0];
         document.getElementById('close-group-id').value = groupId;
+        document.getElementById('group-close-info-summary').innerHTML = `
+            <span class="roll-summary-badge">${firstPos.symbol}</span>
+            Closing <strong>${group.length}-Leg Strategy</strong> (${firstPos.current_quantity}x)
+        `;
         document.getElementById('close-group-date').valueAsDate = new Date();
-        document.getElementById('close-group-qty').value = group[0].current_quantity;
+        document.getElementById('close-group-qty').value = firstPos.current_quantity;
 
         groupCloseLegsContainer.innerHTML = '';
         group.forEach(pos => {
-            const div = document.createElement('div');
-            div.className = 'leg-entry group-close-leg-row';
-            div.dataset.posId = pos.id;
+            const tr = document.createElement('tr');
+            tr.className = 'group-close-leg-row roll-leg-row';
+            tr.dataset.posId = pos.id;
+            tr.dataset.multiplier = pos.multiplier || 100;
             
             const closeType = (pos.initial_type === 'BTO' || pos.initial_type === 'BTC') ? 'STC' : 'BTC';
+            tr.dataset.closeType = closeType;
 
-            div.innerHTML = `
-                <div class="form-row" style="align-items: center; margin-bottom: 5px;">
-                    <div style="flex: 2; font-weight: bold;">${pos.contract_name}</div>
-                    <div style="flex: 1; color: #94a3b8; font-size: 0.9rem;">${pos.initial_type} -> ${closeType}</div>
+            const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
+                ? Number(pos.ib_current_price).toFixed(2) 
+                : '';
+
+            tr.innerHTML = `
+                <td class="col-leg">
+                    <div class="roll-leg-contract">${pos.contract_name}</div>
+                    <div class="roll-leg-actions">
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
+                    </div>
                     <input type="hidden" class="close-leg-type" value="${closeType}">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Close Price</label>
-                        <input type="number" class="close-leg-price" step="any" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Comm (USD)</label>
-                        <input type="number" class="close-leg-comm" step="any" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Total USD</label>
-                        <input type="text" class="close-leg-total" readonly style="background: #334155; opacity: 0.7;">
-                    </div>
-                </div>
+                </td>
+                <td class="col-close-price">
+                    <input type="number" class="roll-input close-leg-price" step="any" required value="${defaultClosePrice}">
+                </td>
+                <td class="col-close-comm">
+                    <input type="number" class="roll-input close-leg-comm" step="any" value="0.00">
+                </td>
+                <td class="col-close-total">
+                    <span class="roll-total-val close-leg-total-display">-</span>
+                    <input type="hidden" class="close-leg-total">
+                </td>
+                <td class="col-close-pnl">
+                    <span class="roll-total-val close-leg-pnl-display">-</span>
+                </td>
             `;
-            groupCloseLegsContainer.appendChild(div);
+            groupCloseLegsContainer.appendChild(tr);
 
-            div.querySelectorAll('input').forEach(el => {
+            tr.querySelectorAll('input').forEach(el => {
                 el.addEventListener('input', calculateGroupCloseTotal);
+                el.addEventListener('change', calculateGroupCloseTotal);
             });
         });
 
