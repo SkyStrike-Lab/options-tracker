@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closedSection = document.getElementById('closed-positions-section');
     const summarySection = document.getElementById('summary-section');
     const filtersSection = document.getElementById('filters');
+    const actionsSection = document.getElementById('actions');
     const modalNew = document.getElementById('modal-new');
     const modalEdit = document.getElementById('modal-edit');
     const modalGroupEdit = document.getElementById('modal-group-edit');
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closedSection.style.display = 'none';
         if (summarySection) summarySection.style.display = 'none';
         if (filtersSection) filtersSection.style.display = 'block';
+        if (actionsSection) actionsSection.style.display = 'block';
         currentStatus = 'Open';
         if (timeframeFilter) {
             timeframeFilter.value = 'all'; // Default to all time
@@ -192,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openSection.style.display = 'none';
         if (summarySection) summarySection.style.display = 'none';
         if (filtersSection) filtersSection.style.display = 'block';
+        if (actionsSection) actionsSection.style.display = 'block';
         currentStatus = 'Closed';
         loadPositions('Closed');
     });
@@ -205,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             openSection.style.display = 'none';
             closedSection.style.display = 'none';
             if (filtersSection) filtersSection.style.display = 'none';
+            if (actionsSection) actionsSection.style.display = 'none';
             loadSummary();
         });
     }
