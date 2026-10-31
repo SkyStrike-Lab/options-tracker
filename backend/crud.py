@@ -861,3 +861,96 @@ def get_lifetime_summary(db: Session):
         "monthly": monthly_list,
         "tickers": ticker_list
     }
+
+def format_delivery_memo(pos: models.Position) -> dict:
+    leg_qty = 1
+    if pos.transactions:
+        # sum opening transactions (BTO / STO) quantity
+        opening_qty = sum(t.quantity for t in pos.transactions if t.transaction_type in ["BTO", "STO"])
+        if opening_qty > 0:
+            leg_qty = opening_qty
+    multiplier = int(pos.multiplier or 100)
+    shares_count = leg_qty * multiplier
+
+    is_delivering = (pos.initial_type == 'STO' and pos.call_put == 'Call') or (pos.initial_type == 'BTO' and pos.call_put == 'Put')
+    action = "SELL" if is_delivering else "BUY"
+    shares = -shares_count if is_delivering else shares_count
+
+    # settlement_date: check transactions for latest date of BTC, STC, EXP
+    settlement_date_str = None
+    if pos.transactions:
+        closing_types = ["BTC", "STC", "EXP"]
+        closing_txs = [t for t in pos.transactions if t.transaction_type in closing_types]
+        if closing_txs:
+            latest_tx = max(closing_txs, key=lambda x: x.date)
+            settlement_date_str = latest_tx.date.strftime("%Y-%m-%d")
+    
+    if not settlement_date_str:
+        if pos.expiration_date:
+            settlement_date_str = pos.expiration_date.strftime("%Y-%m-%d")
+        elif pos.date_opened:
+            settlement_date_str = pos.date_opened.strftime("%Y-%m-%d")
+
+    realized_pnl = pos.realized_pnl_usd or 0.0
+    option_premium_per_share = round(abs(realized_pnl / (shares_count if shares_count else 1)), 4)
+
+    return {
+        "delivery_id": f"delivery-{pos.id}",
+        "position_id": pos.id,
+        "group_id": pos.group_id,
+        "campaign_id": pos.campaign_id,
+        "symbol": pos.symbol,
+        "contract_name": pos.contract_name,
+        "delivery_type": pos.outcome,
+        "action": action,
+        "shares": shares,
+        "shares_count": shares_count,
+        "strike_price": pos.strike_price,
+        "effective_basis": pos.effective_stock_basis,
+        "option_premium_per_share": option_premium_per_share,
+        "total_premium_usd": realized_pnl,
+        "settlement_date": settlement_date_str,
+        "cash_flow_pnl_usd": pos.cash_flow_pnl_usd or realized_pnl,
+        "broker_adjusted_pnl_usd": pos.broker_adjusted_pnl_usd or 0.0,
+        "notes": pos.close_notes
+    }
+
+def get_deliveries(db: Session, symbol: Optional[str] = None, since: Optional[str] = None) -> List[dict]:
+    query = db.query(models.Position).filter(
+        models.Position.status == "Closed",
+        models.Position.outcome.in_(["ASSIGNED", "CALLED_AWAY", "EXERCISED"])
+    )
+    if symbol:
+        query = query.filter(models.Position.symbol.ilike(symbol))
+    
+    positions = query.order_by(models.Position.date_opened.desc()).all()
+    results = []
+    for pos in positions:
+        memo = format_delivery_memo(pos)
+        if since:
+            # check settlement_date >= since or date_opened >= since
+            s_date = memo.get("settlement_date")
+            d_opened = pos.date_opened.strftime("%Y-%m-%d") if pos.date_opened else None
+            if (s_date and s_date >= since) or (d_opened and d_opened >= since):
+                results.append(memo)
+        else:
+            results.append(memo)
+    return results
+
+def get_delivery_by_id(db: Session, delivery_id: str) -> Optional[dict]:
+    # Parse delivery_id: strip "delivery-" prefix if present, convert to int position_id
+    clean_id = delivery_id
+    if clean_id.startswith("delivery-"):
+        clean_id = clean_id[len("delivery-"):]
+    try:
+        pos_id = int(clean_id)
+    except ValueError:
+        return None
+    
+    pos = db.query(models.Position).filter(models.Position.id == pos_id).first()
+    if not pos:
+        return None
+    if pos.status != "Closed" or pos.outcome not in ["ASSIGNED", "CALLED_AWAY", "EXERCISED"]:
+        return None
+    return format_delivery_memo(pos)
+

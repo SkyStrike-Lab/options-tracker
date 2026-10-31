@@ -242,3 +242,26 @@ class LifetimeSummaryResponse(BaseModel):
     outcomes: dict
     monthly: List[MonthlySummary]
     tickers: List[TickerSummary]
+
+class DeliveryMemo(BaseModel):
+    delivery_id: str  # e.g. "delivery-61"
+    position_id: int  # 61
+    group_id: str
+    campaign_id: Optional[str] = None
+    symbol: str
+    contract_name: str
+    delivery_type: str  # "ASSIGNED", "CALLED_AWAY", or "EXERCISED"
+    action: str  # "BUY" (for put assignments or call exercises) or "SELL" (for call called away or put exercises)
+    shares: int  # Signed or count: e.g. 100 for BUY, -100 for SELL
+    shares_count: int  # Absolute count e.g. 100
+    strike_price: Optional[float] = None
+    effective_basis: Optional[float] = None
+    option_premium_per_share: Optional[float] = None
+    total_premium_usd: Optional[float] = None
+    settlement_date: Optional[str] = None  # YYYY-MM-DD
+    cash_flow_pnl_usd: Optional[float] = 0.0
+    broker_adjusted_pnl_usd: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True

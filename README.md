@@ -128,6 +128,8 @@ services/options-tracker/
 | `/api/groups/{id}/reopen` | `POST` | Safely reopen a closed position group (Undo Close). |
 | `/api/campaigns/{id}` | `GET` | Fetch campaign timeline and cumulative P&L. |
 | `/api/analytics/summary` | `GET` | Lifetime performance stats, outcomes, monthly flow, and ticker leaderboard. |
+| `/api/deliveries` | `GET` | Fetch stock delivery memos (assignments, called away, exercises). |
+| `/api/deliveries/{id}` | `GET` | Fetch a specific stock delivery memo by ID. |
 
 ---
 

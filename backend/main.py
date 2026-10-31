@@ -290,6 +290,17 @@ def get_campaign(campaign_id: str, db: Session = Depends(get_db)):
 def read_lifetime_summary(db: Session = Depends(get_db)):
     return crud.get_lifetime_summary(db)
 
+@app.get("/api/deliveries", response_model=List[schemas.DeliveryMemo])
+def get_deliveries(symbol: Optional[str] = None, since: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud.get_deliveries(db=db, symbol=symbol, since=since)
+
+@app.get("/api/deliveries/{delivery_id}", response_model=schemas.DeliveryMemo)
+def get_delivery_by_id(delivery_id: str, db: Session = Depends(get_db)):
+    memo = crud.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if not memo:
+        raise HTTPException(status_code=404, detail=f"Delivery memo '{delivery_id}' not found")
+    return memo
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_config="log_config.json")
