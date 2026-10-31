@@ -805,21 +805,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 7. Column: Actions
                 let actionsHtml = '';
+                const detailsUrl = `details?group_id=${firstPos.group_id}`;
                 if (isSpread) {
                     actionsHtml = `
-                        <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-icon" title="Edit Group" onclick="openGroupEditModal('${firstPos.group_id}')">✏️</button>
-                        <button class="btn-icon" title="Roll Strategy / Spread" onclick="openGroupRollModal('${firstPos.group_id}')">🔄</button>
-                        <button class="btn-icon" title="Close Group" onclick="openGroupCloseModal('${firstPos.group_id}')">✅</button>
-                        <button class="btn-icon" title="Delete Group" onclick="deleteGroup('${firstPos.group_id}')">❌</button>
+                        <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
+                        <button class="btn-action-pill btn-roll" title="Roll Strategy / Spread" onclick="openGroupRollModal('${firstPos.group_id}')">🔄 Roll</button>
+                        <button class="btn-action-pill btn-close" title="Close Strategy / Group" onclick="openGroupCloseModal('${firstPos.group_id}')">✅ Close</button>
+                        <div class="action-menu-dropdown">
+                            <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
+                            <div class="action-menu-popover" style="display: none;">
+                                <button class="action-menu-item" onclick="openGroupEditModal('${firstPos.group_id}')">✏️ Edit Group</button>
+                                <a class="action-menu-item" href="${detailsUrl}" target="_blank">🔗 Strategy Details</a>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item item-danger" onclick="deleteGroup('${firstPos.group_id}')">🗑️ Delete Group</button>
+                            </div>
+                        </div>
                     `;
                 } else {
                     actionsHtml = `
-                        <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-icon" title="Edit Position" onclick="openEditModal(${firstPos.id})">✏️</button>
-                        <button class="btn-icon" title="Roll Position" onclick="openRollModal(${firstPos.id})">🔄</button>
-                        <button class="btn-icon" title="Close Position" onclick="openCloseModal(${firstPos.id}, '${firstPos.initial_type}', ${firstPos.current_quantity})">✅</button>
-                        <button class="btn-icon" title="Delete Position" onclick="deletePosition(${firstPos.id})">❌</button>
+                        <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
+                        <button class="btn-action-pill btn-roll" title="Roll Position" onclick="openRollModal(${firstPos.id})">🔄 Roll</button>
+                        <button class="btn-action-pill btn-close" title="Close Position" onclick="openCloseModal(${firstPos.id}, '${firstPos.initial_type}', ${firstPos.current_quantity})">✅ Close</button>
+                        <div class="action-menu-dropdown">
+                            <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
+                            <div class="action-menu-popover" style="display: none;">
+                                <button class="action-menu-item" onclick="openEditModal(${firstPos.id})">✏️ Edit Position</button>
+                                <a class="action-menu-item" href="${detailsUrl}" target="_blank">🔗 Strategy Details</a>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item item-danger" onclick="deletePosition(${firstPos.id})">🗑️ Delete Position</button>
+                            </div>
+                        </div>
                     `;
                 }
                 
@@ -1023,19 +1038,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 5. Column: Actions
                 let actionsHtml = '';
+                const detailsUrl = `details?group_id=${firstPos.group_id}`;
                 if (isSpread) {
                     actionsHtml = `
-                        <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-icon" title="Edit Group" onclick="openGroupEditModal('${firstPos.group_id}')">✏️</button>
-                        <button class="btn-icon" title="Reopen / Undo Close Group" onclick="reopenGroup('${firstPos.group_id}')">↩️</button>
-                        <button class="btn-icon" title="Delete Group" onclick="deleteGroup('${firstPos.group_id}')">❌</button>
+                        <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
+                        <button class="btn-action-pill btn-reopen" title="Reopen / Undo Close Group" onclick="reopenGroup('${firstPos.group_id}')">↩️ Reopen</button>
+                        <div class="action-menu-dropdown">
+                            <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
+                            <div class="action-menu-popover" style="display: none;">
+                                <button class="action-menu-item" onclick="openGroupEditModal('${firstPos.group_id}')">✏️ Edit Group</button>
+                                <a class="action-menu-item" href="${detailsUrl}" target="_blank">🔗 Strategy Details</a>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item item-danger" onclick="deleteGroup('${firstPos.group_id}')">🗑️ Delete Group</button>
+                            </div>
+                        </div>
                     `;
                 } else {
                     actionsHtml = `
-                        <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-icon" title="Edit Position" onclick="openEditModal(${firstPos.id})">✏️</button>
-                        <button class="btn-icon" title="Reopen / Undo Close Position" onclick="reopenPosition(${firstPos.id})">↩️</button>
-                        <button class="btn-icon" title="Delete Position" onclick="deletePosition(${firstPos.id})">❌</button>
+                        <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
+                        <button class="btn-action-pill btn-reopen" title="Reopen / Undo Close Position" onclick="reopenPosition(${firstPos.id})">↩️ Reopen</button>
+                        <div class="action-menu-dropdown">
+                            <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
+                            <div class="action-menu-popover" style="display: none;">
+                                <button class="action-menu-item" onclick="openEditModal(${firstPos.id})">✏️ Edit Position</button>
+                                <a class="action-menu-item" href="${detailsUrl}" target="_blank">🔗 Strategy Details</a>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item item-danger" onclick="deletePosition(${firstPos.id})">🗑️ Delete Position</button>
+                            </div>
+                        </div>
                     `;
                 }
                 
@@ -2885,9 +2915,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (row) {
             const isHidden = row.style.display === 'none';
             row.style.display = isHidden ? '' : 'none';
-            // btn.style.backgroundColor = isHidden ? '#475569' : '#334155';
+            if (btn) {
+                btn.classList.toggle('active-drawer', isHidden);
+            }
         }
     };
+
+    window.toggleActionMenu = (event, btn) => {
+        event.stopPropagation();
+        const dropdown = btn.closest('.action-menu-dropdown');
+        const popover = dropdown ? dropdown.querySelector('.action-menu-popover') : null;
+        const isShowing = popover && popover.style.display !== 'none';
+        
+        // Close all other popovers
+        document.querySelectorAll('.action-menu-popover').forEach(p => {
+            p.style.display = 'none';
+        });
+        
+        if (popover && !isShowing) {
+            popover.style.display = 'block';
+        }
+    };
+
+    // Close any open popover when clicking anywhere outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu-dropdown')) {
+            document.querySelectorAll('.action-menu-popover').forEach(p => {
+                p.style.display = 'none';
+            });
+        }
+    });
 
     async function fetchCurrentPrices() {
         const symbols = new Set();

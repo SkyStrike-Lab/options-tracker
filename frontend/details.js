@@ -121,6 +121,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         statStatus.textContent = isClosed ? 'CLOSED' : 'OPEN';
         statStatus.style.color = isClosed ? '#94a3b8' : 'var(--success-color)';
 
+        const badgeStatus = document.getElementById('strategy-status-badge');
+        if (badgeStatus) {
+            badgeStatus.textContent = isClosed ? 'CLOSED' : 'ACTIVE OPEN';
+            badgeStatus.className = isClosed ? 'badge-status-pill closed' : 'badge-status-pill';
+        }
+
         let totalNetUsd = 0;
         const maxRiskVal = firstPos.max_loss || 0;
 
@@ -351,6 +357,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (positions.length > 1 || (firstPos.roll_count && firstPos.roll_count > 0) || totalRealized !== 0) {
                     const section = document.getElementById('section-campaign-history');
+                    const timelineEl = document.getElementById('campaign-timeline-container');
+                    if (timelineEl) {
+                        let stepperHtml = '';
+                        positions.forEach((p, idx) => {
+                            const isCurrent = p.group_id === currentGroupId;
+                            const rollLabel = p.roll_count > 0 ? `Roll #${p.roll_count}` : 'Initial (0)';
+                            const pnlVal = p.status === 'Closed' ? p.realized_pnl_usd : p.total_cost_usd;
+                            const pnlSign = pnlVal > 0 ? '+' : '';
+                            const pnlClass = pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative';
+                            const pnlLabel = p.status === 'Closed' ? 'Realized: ' : 'Net Cost: ';
+                            
+                            stepperHtml += `
+                                <div class="stepper-node ${isCurrent ? 'active-step' : ''}">
+                                    <div class="stepper-node-title">${rollLabel} ${isCurrent ? '★ Current' : ''}</div>
+                                    <div style="font-size: 0.78rem; color: #94a3b8;">${formatDate(p.date_opened)}</div>
+                                    <div class="stepper-node-val ${pnlClass}">${pnlLabel}${pnlSign}${formatCurrency(pnlVal)}</div>
+                                </div>
+                            `;
+                            if (idx < positions.length - 1) {
+                                stepperHtml += `<div class="stepper-arrow">&rarr;</div>`;
+                            }
+                        });
+                        timelineEl.innerHTML = `<div class="campaign-stepper">${stepperHtml}</div>`;
+                    }
+
                     const tbody = document.querySelector('#table-campaign tbody');
                     tbody.innerHTML = '';
                     
