@@ -982,12 +982,37 @@ table td {
 .roll-matrix-table .col-new-comm { width: 8%; min-width: 70px; }
 .roll-matrix-table .col-new-total { width: 12%; min-width: 95px; }
 
-/* Group Close Matrix specific column widths */
-#table-group-close-matrix .col-leg { width: 30%; min-width: 180px; }
-#table-group-close-matrix .col-close-price { width: 18%; min-width: 110px; }
-#table-group-close-matrix .col-close-comm { width: 16%; min-width: 100px; }
-#table-group-close-matrix .col-close-total { width: 18%; min-width: 110px; }
-#table-group-close-matrix .col-close-pnl { width: 18%; min-width: 110px; text-align: right; }
+/* Close Matrix specific column widths (both group and single) */
+#table-group-close-matrix .col-leg,
+#table-single-close-matrix .col-leg {
+    width: 38%;
+    min-width: 250px;
+}
+
+#table-group-close-matrix .col-close-price,
+#table-single-close-matrix .col-close-price {
+    width: 16%;
+    min-width: 110px;
+}
+
+#table-group-close-matrix .col-close-comm,
+#table-single-close-matrix .col-close-comm {
+    width: 14%;
+    min-width: 95px;
+}
+
+#table-group-close-matrix .col-close-total,
+#table-single-close-matrix .col-close-total {
+    width: 16%;
+    min-width: 110px;
+}
+
+#table-group-close-matrix .col-close-pnl,
+#table-single-close-matrix .col-close-pnl {
+    width: 16%;
+    min-width: 110px;
+    text-align: right;
+}
 
 /* Table styling for New and Group Edit matrices */
 #table-new-legs td, #table-group-edit-matrix td, #table-group-edit-close-matrix td {
@@ -1118,6 +1143,8 @@ table td {
     font-size: 0.78rem;
     color: #94a3b8;
     padding-left: 4px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 
 /* Lifecycle & Method Selector Styles */

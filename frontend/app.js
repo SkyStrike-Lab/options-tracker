@@ -1688,9 +1688,10 @@ document.addEventListener('DOMContentLoaded', () => {
             closeTotal = total - comm;
         }
 
+        if (Math.abs(closeTotal) < 0.005) closeTotal = 0;
         closeUsdInput.value = closeTotal.toFixed(2);
 
-        const sign = closeTotal >= 0 ? '+' : '';
+        const sign = closeTotal > 0 ? '+' : '';
         const closeTotalText = `${sign}${formatCurrency(closeTotal)}`;
         if (closeSummaryTotalEl) {
             closeSummaryTotalEl.textContent = closeTotalText;
@@ -1710,15 +1711,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const pnl = openingCost + closeTotal;
-            const pnlSign = pnl >= 0 ? '+' : '';
-            const pnlText = `${pnlSign}${formatCurrency(pnl)}`;
+            const normalizedPnl = Math.abs(pnl) < 0.005 ? 0 : pnl;
+            const pnlSign = normalizedPnl > 0 ? '+' : '';
+            const pnlText = `${pnlSign}${formatCurrency(normalizedPnl)}`;
             if (closeSummaryPnlEl) {
                 closeSummaryPnlEl.textContent = pnlText;
-                closeSummaryPnlEl.className = `group-roll-stat-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+                closeSummaryPnlEl.className = `group-roll-stat-val ${normalizedPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
             }
             if (closeSinglePnlDisplayEl) {
                 closeSinglePnlDisplayEl.textContent = pnlText;
-                closeSinglePnlDisplayEl.className = `roll-total-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+                closeSinglePnlDisplayEl.className = `roll-total-val ${normalizedPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
             }
         }
     };
