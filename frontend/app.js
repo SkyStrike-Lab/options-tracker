@@ -862,13 +862,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     const occ = pos.occ_symbol || '';
+                    let closeBtnLabel = '✅ Close / Assign';
+                    let closeBtnTitle = 'Close or assign this short put';
+                    if (pos.initial_type === 'BTO') {
+                        closeBtnLabel = '✅ Close / Exercise';
+                        closeBtnTitle = 'Close or exercise this long contract';
+                    } else if (pos.call_put === 'Call') {
+                        closeBtnLabel = '✅ Close / Called Away';
+                        closeBtnTitle = 'Close or mark this short call called away';
+                    }
+
                     detailsLegsHtml += `
                         <div class="drawer-leg-item" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0;">
                             <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">
                                 ${pos.initial_type} ${pos.current_quantity}x ${pos.contract_name}
                                 <span style="font-size: 0.8rem; font-family: monospace; color: #64748b; margin-left: 10px;">(${occ})</span>
                                 <button class="btn-icon-small" title="Roll this leg" onclick="openRollModal(${pos.id})">🔄 Roll</button>
-                                <button class="btn-icon-small" title="Close or Assign this leg" onclick="openCloseModal(${pos.id}, '${pos.initial_type}', ${pos.current_quantity})">✅ Close / Assign</button>
+                                <button class="btn-icon-small" title="${closeBtnTitle}" onclick="openCloseModal(${pos.id}, '${pos.initial_type}', ${pos.current_quantity})">${closeBtnLabel}</button>
                             </div>
                             <div style="display: flex; gap: 20px; font-size: 0.9rem;">
                                 <div style="flex: 1;">
@@ -956,6 +966,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let outcomeBadgeHtml = '';
                     if (pos.outcome === 'EXPIRED' || (closeTrans && closeTrans.transaction_type === 'EXP')) {
                         outcomeBadgeHtml = `<span class="badge badge-exp">[EXP]</span>`;
+                    } else if (pos.outcome === 'CALLED_AWAY') {
+                        outcomeBadgeHtml = `<span class="badge badge-assigned">[CALLED AWAY]</span>`;
                     } else if (pos.outcome === 'ASSIGNED' || (closeTrans && closeTrans.transaction_type === 'ASSIGN')) {
                         outcomeBadgeHtml = `<span class="badge badge-assigned">[ASSIGNED]</span>`;
                     } else if (pos.outcome === 'EXERCISED' || (closeTrans && closeTrans.transaction_type === 'EXERCISE')) {
@@ -1045,15 +1057,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     const occ = pos.occ_symbol || '';
 
                     let deliveryMemoHtml = '';
-                    if (pos.outcome === 'ASSIGNED' || pos.outcome === 'EXERCISED') {
+                    if (pos.outcome === 'ASSIGNED' || pos.outcome === 'CALLED_AWAY' || pos.outcome === 'EXERCISED') {
+                        const isDelivering = (pos.initial_type === 'STO' && pos.call_put === 'Call') || (pos.initial_type === 'BTO' && pos.call_put === 'Put');
+                        const sharesTotal = pos.current_quantity * (pos.multiplier || 100);
+                        const shareText = isDelivering 
+                            ? `-${sharesTotal}x ${pos.symbol} (Sold / Delivered)` 
+                            : `+${sharesTotal}x ${pos.symbol} (Acquired / Bought)`;
+                        const metricLabel = isDelivering ? 'Effective Sale:' : 'Effective Basis:';
                         const basisText = pos.effective_stock_basis ? `$${formatCurrency(pos.effective_stock_basis)}/sh` : '-';
+                        const memoTitle = pos.outcome === 'CALLED_AWAY' 
+                            ? '📦 Delivery Memo (Shares Called Away)' 
+                            : (pos.outcome === 'EXERCISED' 
+                                ? (pos.call_put === 'Put' ? '📦 Delivery Memo (Put Exercised)' : '📦 Delivery Memo (Call Exercised)')
+                                : '📦 Delivery Memo (Stock Assignment)');
+
                         deliveryMemoHtml = `
                             <div class="delivery-memo-banner" style="margin-top: 10px;">
-                                <div class="delivery-memo-title">📦 Delivery Memo (${pos.outcome})</div>
+                                <div class="delivery-memo-title">${memoTitle}</div>
                                 <div class="delivery-memo-grid">
-                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${pos.current_quantity * (pos.multiplier || 100)}x ${pos.symbol}</div>
+                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${shareText}</div>
                                     <div class="delivery-memo-item"><span class="delivery-memo-label">Strike:</span> $${formatCurrency(pos.strike_price)}</div>
-                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Effective Basis:</span> <strong>${basisText}</strong></div>
+                                    <div class="delivery-memo-item"><span class="delivery-memo-label">${metricLabel}</span> <strong>${basisText}</strong></div>
                                     ${pos.close_notes ? `<div class="delivery-memo-item" style="grid-column: 1 / -1;"><span class="delivery-memo-label">Notes:</span> ${pos.close_notes}</div>` : ''}
                                 </div>
                             </div>
@@ -1513,10 +1537,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('close-type').value = closeType;
 
         const isShort = pos.initial_type === 'STO';
+        const isCall = pos.call_put === 'Call';
         const assignBtn = document.getElementById('btn-close-method-assigned');
         if (assignBtn) {
-            assignBtn.textContent = isShort ? '📦 Assigned @ Strike' : '📦 Exercised @ Strike';
-            assignBtn.dataset.method = isShort ? 'ASSIGNED' : 'EXERCISED';
+            if (isShort && isCall) {
+                assignBtn.textContent = '📦 Called Away @ Strike';
+                assignBtn.dataset.method = 'CALLED_AWAY';
+            } else if (isShort) {
+                assignBtn.textContent = '📦 Assigned @ Strike';
+                assignBtn.dataset.method = 'ASSIGNED';
+            } else {
+                assignBtn.textContent = '📦 Exercised @ Strike';
+                assignBtn.dataset.method = 'EXERCISED';
+            }
         }
 
         // Reset Method Selector to TRADED
@@ -1617,15 +1650,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (memoEl) memoEl.style.display = 'none';
                     document.getElementById('close-effective-basis').value = '';
                     document.getElementById('close-notes').value = 'Expired worthless';
-                } else if (method === 'ASSIGNED' || method === 'EXERCISED') {
-                    const outcome = isShort ? 'ASSIGNED' : 'EXERCISED';
+                } else if (method === 'ASSIGNED' || method === 'CALLED_AWAY' || method === 'EXERCISED') {
+                    const isShort = pos.initial_type === 'STO';
+                    const isCall = pos.call_put === 'Call';
+                    let outcome = 'ASSIGNED';
+                    let closeType = 'ASSIGN';
+                    let badgeLabel = 'ASSIGNED';
+                    let memoTitle = '📦 Delivery Memo (Stock Assignment)';
+                    let isDelivering = false;
+
+                    if (isShort && isCall) {
+                        outcome = 'CALLED_AWAY';
+                        closeType = 'ASSIGN';
+                        badgeLabel = 'CALLED AWAY';
+                        memoTitle = '📦 Delivery Memo (Shares Called Away)';
+                        isDelivering = true;
+                    } else if (isShort && !isCall) {
+                        outcome = 'ASSIGNED';
+                        closeType = 'ASSIGN';
+                        badgeLabel = 'ASSIGNED';
+                        memoTitle = '📦 Delivery Memo (Stock Assignment)';
+                        isDelivering = false;
+                    } else if (!isShort && isCall) {
+                        outcome = 'EXERCISED';
+                        closeType = 'EXERCISE';
+                        badgeLabel = 'EXERCISED';
+                        memoTitle = '📦 Delivery Memo (Call Exercised)';
+                        isDelivering = false;
+                    } else { // Long Put
+                        outcome = 'EXERCISED';
+                        closeType = 'EXERCISE';
+                        badgeLabel = 'EXERCISED';
+                        memoTitle = '📦 Delivery Memo (Put Exercised)';
+                        isDelivering = true;
+                    }
+
                     document.getElementById('close-outcome').value = outcome;
-                    document.getElementById('close-type').value = isShort ? 'ASSIGN' : 'EXERCISE';
+                    document.getElementById('close-type').value = closeType;
                     if (actionsEl) {
+                        const badgeClass = isShort ? 'badge-assigned' : 'badge-exercised';
                         actionsEl.innerHTML = `
                             <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
                             <span class="roll-arrow-icon">&rarr;</span>
-                            <span class="badge ${isShort ? 'badge-assigned' : 'badge-exercised'}">${outcome}</span>
+                            <span class="badge ${badgeClass}">${badgeLabel}</span>
                         `;
                     }
                     closePriceInput.value = '0.00';
@@ -1637,24 +1704,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const strike = pos.strike_price || 0;
                     let basis = strike;
-                    if (pos.call_put === 'Put') {
-                        basis = strike - origPrice;
-                    } else {
+                    let metricLabel = '';
+                    let premiumLabel = '';
+
+                    if (isShort && isCall) {
                         basis = strike + origPrice;
+                        metricLabel = 'Effective Sale:';
+                        premiumLabel = 'Premium Kept:';
+                    } else if (isShort && !isCall) {
+                        basis = strike - origPrice;
+                        metricLabel = 'Effective Basis:';
+                        premiumLabel = 'Premium Kept:';
+                    } else if (!isShort && isCall) {
+                        basis = strike + origPrice;
+                        metricLabel = 'Effective Basis:';
+                        premiumLabel = 'Premium Paid:';
+                    } else {
+                        basis = strike - origPrice;
+                        metricLabel = 'Effective Net Sale:';
+                        premiumLabel = 'Premium Paid:';
                     }
 
                     document.getElementById('close-effective-basis').value = basis.toFixed(2);
                     const sharesCount = (parseInt(closeQtyInput.value) || 1) * (pos.multiplier || 100);
-                    document.getElementById('close-notes').value = `${outcome} ${sharesCount} shares @ $${strike.toFixed(2)}. Effective net basis: $${basis.toFixed(2)}/sh`;
+                    const shareSign = isDelivering ? '-' : '+';
+                    const shareText = isDelivering 
+                        ? `-${sharesCount}x ${pos.symbol} (Sold / Delivered)` 
+                        : `+${sharesCount}x ${pos.symbol} (Acquired / Bought)`;
+
+                    document.getElementById('close-notes').value = `${outcome} ${shareSign}${sharesCount} shares @ $${strike.toFixed(2)}. ${metricLabel} $${basis.toFixed(2)}/sh`;
 
                     if (memoEl) {
                         memoEl.innerHTML = `
-                            <div class="delivery-memo-title">📦 Delivery Memo (${isShort ? 'Stock Assignment' : 'Option Exercise'})</div>
+                            <div class="delivery-memo-title">${memoTitle}</div>
                             <div class="delivery-memo-grid">
-                                <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${sharesCount}x ${pos.symbol}</div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${shareText}</div>
                                 <div class="delivery-memo-item"><span class="delivery-memo-label">Strike:</span> $${formatCurrency(strike)}</div>
-                                <div class="delivery-memo-item"><span class="delivery-memo-label">Premium ${isShort ? 'Kept' : 'Paid'}:</span> $${formatCurrency(origPrice)}/sh</div>
-                                <div class="delivery-memo-item"><span class="delivery-memo-label">Effective Basis:</span> <strong>$${formatCurrency(basis)}/sh</strong></div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">${premiumLabel}</span> $${formatCurrency(origPrice)}/sh</div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">${metricLabel}</span> <strong>$${formatCurrency(basis)}/sh</strong></div>
                             </div>
                         `;
                         memoEl.style.display = 'block';

@@ -21,12 +21,12 @@ def get_positions(db: Session, status: str = None):
     )
     assigned_groups = set(
         gid for (gid,) in db.query(models.Position.group_id)
-        .filter(models.Position.status == "Closed", models.Position.outcome == "ASSIGNED")
+        .filter(models.Position.status == "Closed", models.Position.outcome.in_(["ASSIGNED", "CALLED_AWAY"]))
         .all() if gid
     )
     assigned_campaigns = set(
         cid for (cid,) in db.query(models.Position.campaign_id)
-        .filter(models.Position.status == "Closed", models.Position.outcome == "ASSIGNED")
+        .filter(models.Position.status == "Closed", models.Position.outcome.in_(["ASSIGNED", "CALLED_AWAY"]))
         .all() if cid
     )
     for p in positions:
