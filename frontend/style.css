@@ -662,9 +662,6 @@ table td {
         padding-top: 10px !important;
         margin-top: 4px !important;
     }
-    table td[data-label="Realized P/L"] {
-        grid-column: span 2 !important;
-    }
 
     /* Add distinct separators for card header/footer cells */
     table td.cell-legs,

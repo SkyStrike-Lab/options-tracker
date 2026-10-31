@@ -51,17 +51,18 @@
                     <table id="table-open">
                         <thead>
                             <tr>
-                                <th style="width: 40%" data-sort="symbol">Position / Legs</th>
+                                <th style="width: 34%" data-sort="symbol">Position / Legs</th>
+                                <th style="width: 10%" data-sort="opened">Opened</th>
                                 <th style="width: 12%" data-sort="expiry">Expiry</th>
-                                <th style="width: 12%">Price (Open/Cur)</th>
-                                <th style="width: 12%" data-sort="max_loss">Max Loss / AR</th>
-                                <th style="width: 12%" data-sort="pnl">Premium / P/L</th>
-                                <th style="width: 12%">Actions</th>
+                                <th style="width: 11%">Price (Open/Cur)</th>
+                                <th style="width: 11%" data-sort="max_loss">Max Loss / AR</th>
+                                <th style="width: 11%" data-sort="pnl">Premium / P/L</th>
+                                <th style="width: 11%">Actions</th>
                             </tr>
                         </thead>
                         <tfoot>
                             <tr class="total-row">
-                                <td colspan="2" data-label="Summary">Total Open Positions</td>
+                                <td colspan="3" data-label="Summary">Total Open Positions</td>
                                 <td></td>
                                 <td id="total-open-risk" data-label="Total Risk / AR">0.00</td>
                                 <td id="total-open-usd" data-label="Total Premium / P/L">0.00</td>
@@ -79,15 +80,16 @@
                     <table id="table-closed">
                         <thead>
                             <tr>
-                                <th style="width: 62%" data-sort="symbol">Position / Legs</th>
+                                <th style="width: 50%" data-sort="symbol">Position / Legs</th>
+                                <th style="width: 14%" data-sort="close_date">Date Closed</th>
                                 <th style="width: 12%" data-sort="hold_time">Hold Time</th>
-                                <th style="width: 16%" data-sort="pnl">Realized P/L</th>
+                                <th style="width: 14%" data-sort="pnl">Realized P/L</th>
                                 <th style="width: 10%">Actions</th>
                             </tr>
                         </thead>
                         <tfoot>
                             <tr class="total-row">
-                                <td colspan="2" data-label="Summary">Total Realized P&L</td>
+                                <td colspan="3" data-label="Summary">Total Realized P&L</td>
                                 <td id="total-closed-usd" data-label="Total Realized P&L">0.00</td>
                                 <td></td>
                             </tr>

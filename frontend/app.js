@@ -567,8 +567,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return isDateInTimeframe(group[0].date_opened, timeframeValue);
                 } else {
                     const dates = group.flatMap(p => p.transactions)
-                        .filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC')
-                        .map(t => new Date(t.date).getTime());
+                        .filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO')
+                        .map(t => new Date(t.date).getTime())
+                        .filter(t => !isNaN(t));
                     const latestCloseTime = dates.length > 0 ? Math.max(...dates) : 0;
                     return latestCloseTime > 0 && isDateInTimeframe(latestCloseTime, timeframeValue);
                 }
@@ -581,6 +582,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (status === 'Open') {
                 if (sortColumnOpen === 'symbol') {
                     comparison = a[0].symbol.localeCompare(b[0].symbol);
+                } else if (sortColumnOpen === 'opened') {
+                    const dateA = a[0].date_opened ? new Date(a[0].date_opened).getTime() : 0;
+                    const dateB = b[0].date_opened ? new Date(b[0].date_opened).getTime() : 0;
+                    comparison = dateA - dateB;
                 } else if (sortColumnOpen === 'expiry') {
                     const dateA = a[0].expiration_date ? new Date(a[0].expiration_date) : new Date(0);
                     const dateB = b[0].expiration_date ? new Date(b[0].expiration_date) : new Date(0);
@@ -602,8 +607,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const getHoldTimeDays = (g) => {
                         const firstPos = g[0];
                         const closeTransDates = g.flatMap(p => p.transactions)
-                            .filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC')
-                            .map(t => new Date(t.date).getTime());
+                            .filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO')
+                            .map(t => new Date(t.date).getTime())
+                            .filter(t => !isNaN(t));
                         if (closeTransDates.length === 0 || !firstPos.date_opened) return 0;
                         return Math.max(...closeTransDates) - new Date(firstPos.date_opened).getTime();
                     };
@@ -615,8 +621,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else { // default: close_date
                     const getLatestCloseDate = (g) => {
                         const dates = g.flatMap(p => p.transactions)
-                            .filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC')
-                            .map(t => new Date(t.date).getTime());
+                            .filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO')
+                            .map(t => new Date(t.date).getTime())
+                            .filter(t => !isNaN(t));
                         return dates.length > 0 ? Math.max(...dates) : 0;
                     };
                     comparison = getLatestCloseDate(a) - getLatestCloseDate(b);
@@ -821,6 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="position-underlying-header">${underlyingLink}</div>
                         ${legsHtml}
                     </td>
+                    <td class="cell-opened" data-label="Opened" style="vertical-align: middle;">${formatDate(firstPos.date_opened)}</td>
                     <td class="cell-expiry" data-label="Expiry">${expiryHtml}</td>
                     <td class="cell-price" data-label="Price (Open/Cur)" style="vertical-align: middle;">${priceHtml}</td>
                     <td class="cell-maxloss" data-label="Max Loss / AR">${maxLossHtml}</td>
@@ -918,7 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 detailsTr.innerHTML = `
-                    <td colspan="6">
+                    <td colspan="7">
                         <div class="details-content-v2" style="background: rgba(255, 255, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin: 5px 0;">
                             <div style="margin-bottom: 10px; font-weight: bold;">
                                 Current Underlying Price: 
@@ -997,11 +1005,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 legsHtml = `<div class="legs-wrapper">${legsHtml}</div>`;
                 
-                // 3. Column: Hold Time
+                // 3. Column: Date Closed & Hold Time
                 const closeTransDates = group.flatMap(p => p.transactions)
                     .filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO')
-                    .map(t => new Date(t.date));
+                    .map(t => new Date(t.date).getTime())
+                    .filter(t => !isNaN(t));
                 const latestCloseDate = closeTransDates.length > 0 ? new Date(Math.max(...closeTransDates)) : null;
+                const dateClosedStr = latestCloseDate ? formatDate(latestCloseDate.toISOString()) : '-';
                 const holdTimeStr = (latestCloseDate && firstPos.date_opened) 
                     ? calculateHoldTime(firstPos.date_opened, latestCloseDate.toISOString()) 
                     : '-';
@@ -1032,6 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="position-underlying-header">${underlyingLink}</div>
                         ${legsHtml}
                     </td>
+                    <td class="cell-date-closed" data-label="Date Closed" style="vertical-align: middle;">${dateClosedStr}</td>
                     <td data-label="Hold Time" style="vertical-align: middle; font-weight: bold; color: #ffffff;">${holdTimeStr}</td>
                     <td data-label="Realized P/L" style="vertical-align: middle;">${realizedPnLHtml}</td>
                     <td class="action-cell" data-label="Actions"><div class="action-cell-inner">${actionsHtml}</div></td>
@@ -1130,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 detailsTr.innerHTML = `
-                    <td colspan="4">
+                    <td colspan="5">
                         <div class="details-content-v2" style="background: rgba(255, 255, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin: 5px 0;">
                             <div class="drawer-legs-container">
                                 ${detailsLegsHtml}
