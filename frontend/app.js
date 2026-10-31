@@ -1528,12 +1528,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('close-effective-basis').value = '';
         document.getElementById('close-notes').value = '';
 
-        const badgeEl = document.getElementById('close-type-badge');
-        badgeEl.innerHTML = `
-            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
-            <span class="roll-arrow-icon">&rarr;</span>
-            <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
-        `;
+        const actionsEl = document.getElementById('single-close-actions');
+        if (actionsEl) {
+            actionsEl.innerHTML = `
+                <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                <span class="roll-arrow-icon">&rarr;</span>
+                <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
+            `;
+        }
 
         document.getElementById('close-qty').value = currentQty;
         document.getElementById('close-qty').max = currentQty;
@@ -1571,18 +1573,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const origPrice = getOriginalPrice(pos) || 0;
                 const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
                 const isShort = pos.initial_type === 'STO';
-                const badgeEl = document.getElementById('close-type-badge');
+                const actionsEl = document.getElementById('single-close-actions');
                 const memoEl = document.getElementById('close-delivery-memo');
 
                 if (method === 'TRADED') {
                     document.getElementById('close-outcome').value = 'TRADED';
                     const closeType = isShort ? 'BTC' : 'STC';
                     document.getElementById('close-type').value = closeType;
-                    badgeEl.innerHTML = `
-                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
-                        <span class="roll-arrow-icon">&rarr;</span>
-                        <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
-                    `;
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                            <span class="roll-arrow-icon">&rarr;</span>
+                            <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
+                        `;
+                    }
                     closePriceInput.readOnly = false;
                     closePriceInput.classList.remove('input-readonly');
                     const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
@@ -1597,11 +1601,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (method === 'EXPIRED') {
                     document.getElementById('close-outcome').value = 'EXPIRED';
                     document.getElementById('close-type').value = 'EXP';
-                    badgeEl.innerHTML = `
-                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
-                        <span class="roll-arrow-icon">&rarr;</span>
-                        <span class="badge badge-exp">EXPIRED</span>
-                    `;
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                            <span class="roll-arrow-icon">&rarr;</span>
+                            <span class="badge badge-exp">EXPIRED</span>
+                        `;
+                    }
                     closePriceInput.value = '0.00';
                     closePriceInput.readOnly = true;
                     closePriceInput.classList.add('input-readonly');
@@ -1615,11 +1621,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const outcome = isShort ? 'ASSIGNED' : 'EXERCISED';
                     document.getElementById('close-outcome').value = outcome;
                     document.getElementById('close-type').value = isShort ? 'ASSIGN' : 'EXERCISE';
-                    badgeEl.innerHTML = `
-                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
-                        <span class="roll-arrow-icon">&rarr;</span>
-                        <span class="badge ${isShort ? 'badge-assigned' : 'badge-exercised'}">${outcome}</span>
-                    `;
+                    if (actionsEl) {
+                        actionsEl.innerHTML = `
+                            <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                            <span class="roll-arrow-icon">&rarr;</span>
+                            <span class="badge ${isShort ? 'badge-assigned' : 'badge-exercised'}">${outcome}</span>
+                        `;
+                    }
                     closePriceInput.value = '0.00';
                     closePriceInput.readOnly = true;
                     closePriceInput.classList.add('input-readonly');

@@ -1123,7 +1123,9 @@ table td {
     color: #64748b;
     font-size: 1.1rem;
     text-align: center;
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .roll-leg-contract {
