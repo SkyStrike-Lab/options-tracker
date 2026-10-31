@@ -95,6 +95,8 @@ class Position(BaseModel):
     effective_stock_basis: Optional[float] = None
     close_notes: Optional[str] = None
     has_assigned_leg: Optional[bool] = False
+    cash_flow_pnl_usd: Optional[float] = 0.0
+    broker_adjusted_pnl_usd: Optional[float] = 0.0
 
     class Config:
         from_attributes = True

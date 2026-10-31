@@ -32,6 +32,16 @@ class Position(Base):
 
     transactions = relationship("Transaction", back_populates="position")
 
+    @property
+    def cash_flow_pnl_usd(self) -> float:
+        return float(self.realized_pnl_usd or 0.0)
+
+    @property
+    def broker_adjusted_pnl_usd(self) -> float:
+        if self.status == "Closed" and self.outcome in ("ASSIGNED", "CALLED_AWAY"):
+            return 0.0
+        return float(self.realized_pnl_usd or 0.0)
+
 class Transaction(Base):
     __tablename__ = "transactions"
 
