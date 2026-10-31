@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tabOpen = document.getElementById('tab-open');
     const tabClosed = document.getElementById('tab-closed');
+    const tabSummary = document.getElementById('tab-summary');
     const openSection = document.getElementById('open-positions-section');
     const closedSection = document.getElementById('closed-positions-section');
+    const summarySection = document.getElementById('summary-section');
+    const filtersSection = document.getElementById('filters');
     const modalNew = document.getElementById('modal-new');
     const modalEdit = document.getElementById('modal-edit');
     const modalGroupEdit = document.getElementById('modal-group-edit');
@@ -169,8 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
     tabOpen.addEventListener('click', () => {
         tabOpen.classList.add('active');
         tabClosed.classList.remove('active');
+        if (tabSummary) tabSummary.classList.remove('active');
         openSection.style.display = 'block';
         closedSection.style.display = 'none';
+        if (summarySection) summarySection.style.display = 'none';
+        if (filtersSection) filtersSection.style.display = 'block';
         currentStatus = 'Open';
         if (timeframeFilter) {
             timeframeFilter.value = 'all'; // Default to all time
@@ -181,11 +187,157 @@ document.addEventListener('DOMContentLoaded', () => {
     tabClosed.addEventListener('click', () => {
         tabClosed.classList.add('active');
         tabOpen.classList.remove('active');
+        if (tabSummary) tabSummary.classList.remove('active');
         closedSection.style.display = 'block';
         openSection.style.display = 'none';
+        if (summarySection) summarySection.style.display = 'none';
+        if (filtersSection) filtersSection.style.display = 'block';
         currentStatus = 'Closed';
         loadPositions('Closed');
     });
+
+    if (tabSummary) {
+        tabSummary.addEventListener('click', () => {
+            tabSummary.classList.add('active');
+            tabOpen.classList.remove('active');
+            tabClosed.classList.remove('active');
+            if (summarySection) summarySection.style.display = 'block';
+            openSection.style.display = 'none';
+            closedSection.style.display = 'none';
+            if (filtersSection) filtersSection.style.display = 'none';
+            loadSummary();
+        });
+    }
+
+    async function loadSummary() {
+        try {
+            const res = await fetch('/api/analytics/summary');
+            if (!res.ok) throw new Error('Failed to load lifetime summary');
+            const data = await res.json();
+
+            // 1. Top KPI Grid
+            const cashPnlEl = document.getElementById('kpi-cash-pnl');
+            const brokerPnlEl = document.getElementById('kpi-broker-pnl');
+            const winRateEl = document.getElementById('kpi-win-rate');
+            const winRateBadgeEl = document.getElementById('kpi-winrate-badge');
+            const winsLossesEl = document.getElementById('kpi-wins-losses');
+            const profitFactorEl = document.getElementById('kpi-profit-factor');
+            const premiumEl = document.getElementById('kpi-premium');
+            const commissionsEl = document.getElementById('kpi-commissions');
+            const tradesCountEl = document.getElementById('kpi-trades-count');
+            const avgHoldEl = document.getElementById('kpi-avg-hold');
+            const avgWinEl = document.getElementById('kpi-avg-win');
+            const avgLossEl = document.getElementById('kpi-avg-loss');
+
+            const cashSign = data.cash_pnl >= 0 ? '+' : '';
+            cashPnlEl.textContent = `${cashSign}$${formatCurrency(data.cash_pnl)}`;
+            cashPnlEl.className = `summary-card-val ${data.cash_pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+
+            const brokerSign = data.broker_pnl >= 0 ? '+' : '';
+            brokerPnlEl.textContent = `${brokerSign}$${formatCurrency(data.broker_pnl)}`;
+            brokerPnlEl.className = data.broker_pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+            winRateEl.textContent = `${data.win_rate.toFixed(1)}%`;
+            winRateBadgeEl.textContent = `${data.wins}W / ${data.losses}L`;
+            winsLossesEl.textContent = `${data.wins} Wins, ${data.losses} Losses`;
+            profitFactorEl.textContent = data.profit_factor.toFixed(2);
+
+            premiumEl.textContent = `+$${formatCurrency(data.total_premium_harvested)}`;
+            commissionsEl.textContent = `$${formatCurrency(data.total_commissions)}`;
+
+            tradesCountEl.textContent = `${data.total_trades} Strategies (${data.total_legs} Legs)`;
+            avgHoldEl.textContent = `${data.avg_hold_days.toFixed(1)} Days`;
+            avgWinEl.textContent = `+$${formatCurrency(data.avg_win)}`;
+            avgLossEl.textContent = `-$${formatCurrency(data.avg_loss)}`;
+
+            // 2. Lifecycle Outcomes Breakdown
+            const outcomesListEl = document.getElementById('summary-outcomes-list');
+            const totalOutcomes = data.total_trades || 1;
+            const outcomeLabels = {
+                'TRADED': { label: 'Closed Early / Target Reached', barClass: 'bar-traded', icon: '🎯' },
+                'LOSS': { label: 'Managed Losses / Cut', barClass: 'bar-loss', icon: '📉' },
+                'EXPIRED': { label: 'Expired Worthless (100% Win)', barClass: 'bar-expired', icon: '⏳' },
+                'ASSIGNED': { label: 'Assigned / Stock Purchased', barClass: 'bar-assigned', icon: '📦' },
+                'CALLED_AWAY': { label: 'Called Away / Stock Sold', barClass: 'bar-assigned', icon: '🚀' }
+            };
+
+            let outcomesHtml = '';
+            for (const [key, count] of Object.entries(data.outcomes)) {
+                const meta = outcomeLabels[key] || { label: key, barClass: 'bar-traded', icon: '📌' };
+                const pct = ((count / totalOutcomes) * 100).toFixed(1);
+                outcomesHtml += `
+                    <div class="outcome-row">
+                        <div class="outcome-info">
+                            <span class="outcome-title">${meta.icon} ${meta.label}</span>
+                            <span class="outcome-count-pill">${count}</span>
+                        </div>
+                        <div class="outcome-bar-track">
+                            <div class="outcome-bar-fill ${meta.barClass}" style="width: ${pct}%;"></div>
+                        </div>
+                        <div class="outcome-stats">
+                            <span>${pct}%</span>
+                        </div>
+                    </div>
+                `;
+            }
+            outcomesListEl.innerHTML = outcomesHtml || '<div style="color: #64748b; padding: 10px;">No outcome data available.</div>';
+
+            // 3. Monthly Income Breakdown
+            const monthlyListEl = document.getElementById('summary-monthly-list');
+            const monthlyArr = (data.monthly || []).slice().reverse(); // newest first
+            const maxAbsMonthly = Math.max(...monthlyArr.map(m => Math.abs(m.cash_pnl)), 1);
+
+            let monthlyHtml = '';
+            for (const m of monthlyArr) {
+                const sign = m.cash_pnl >= 0 ? '+' : '';
+                const pnlClass = m.cash_pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+                const barClass = m.cash_pnl >= 0 ? 'bar-positive' : 'bar-negative';
+                const pct = Math.min(100, (Math.abs(m.cash_pnl) / maxAbsMonthly) * 100).toFixed(1);
+
+                monthlyHtml += `
+                    <div class="monthly-income-row">
+                        <div class="monthly-info">
+                            <span class="monthly-label">📅 ${m.month}</span>
+                            <span class="monthly-count-pill">${m.trades} trades</span>
+                        </div>
+                        <div class="monthly-bar-track">
+                            <div class="monthly-bar-fill ${barClass}" style="width: ${pct}%;"></div>
+                        </div>
+                        <div class="monthly-stats">
+                            <span class="${pnlClass}">${sign}$${formatCurrency(m.cash_pnl)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            monthlyListEl.innerHTML = monthlyHtml || '<div style="color: #64748b; padding: 10px;">No monthly data available.</div>';
+
+            // 4. Ticker Performance Leaderboard
+            const tickerTbody = document.getElementById('ticker-summary-tbody');
+            let tickerHtml = '';
+            for (const t of data.tickers || []) {
+                const sign = t.cash_pnl >= 0 ? '+' : '';
+                const cashClass = t.cash_pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+                const brokerSign = t.broker_pnl >= 0 ? '+' : '';
+                const brokerClass = t.broker_pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+                const pillClass = t.win_rate >= 80 ? 'high' : (t.win_rate >= 50 ? 'med' : 'low');
+
+                tickerHtml += `
+                    <tr>
+                        <td><span class="ticker-symbol-text">${t.symbol}</span></td>
+                        <td>${t.trades}</td>
+                        <td><span class="winrate-pill ${pillClass}">${t.win_rate.toFixed(1)}% (${t.wins}W / ${t.losses}L)</span></td>
+                        <td class="${cashClass}" style="font-weight: bold;">${sign}$${formatCurrency(t.cash_pnl)}</td>
+                        <td class="${brokerClass}">${brokerSign}$${formatCurrency(t.broker_pnl)}</td>
+                        <td>${t.avg_hold_days.toFixed(1)} days</td>
+                    </tr>
+                `;
+            }
+            tickerTbody.innerHTML = tickerHtml || '<tr><td colspan="6" style="text-align: center; color: #64748b;">No ticker data available.</td></tr>';
+
+        } catch (err) {
+            console.error('Error loading summary:', err);
+        }
+    }
 
     // Modal handling
     btnNew.addEventListener('click', () => {

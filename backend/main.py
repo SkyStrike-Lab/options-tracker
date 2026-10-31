@@ -286,6 +286,10 @@ def get_campaign(campaign_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Campaign not found")
     return campaign
 
+@app.get("/api/analytics/summary", response_model=schemas.LifetimeSummaryResponse)
+def read_lifetime_summary(db: Session = Depends(get_db)):
+    return crud.get_lifetime_summary(db)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_config="log_config.json")

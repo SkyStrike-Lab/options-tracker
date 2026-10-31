@@ -203,3 +203,40 @@ class RollGroupRequest(BaseModel):
     new_expiration_date: datetime
     max_loss: Optional[float] = None
     legs: List[RollGroupLegItem]
+
+class TickerSummary(BaseModel):
+    symbol: str
+    trades: int
+    wins: int
+    losses: int
+    win_rate: float
+    cash_pnl: float
+    broker_pnl: float
+    avg_hold_days: float
+
+class MonthlySummary(BaseModel):
+    month: str
+    trades: int
+    cash_pnl: float
+    broker_pnl: float
+
+class LifetimeSummaryResponse(BaseModel):
+    total_trades: int
+    total_legs: int
+    wins: int
+    losses: int
+    ties: int
+    win_rate: float
+    cash_pnl: float
+    broker_pnl: float
+    gross_profit: float
+    gross_loss: float
+    profit_factor: float
+    avg_win: float
+    avg_loss: float
+    avg_hold_days: float
+    total_commissions: float
+    total_premium_harvested: float
+    outcomes: dict
+    monthly: List[MonthlySummary]
+    tickers: List[TickerSummary]

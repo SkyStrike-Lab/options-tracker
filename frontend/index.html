@@ -16,6 +16,7 @@
             <nav>
                 <button id="tab-open" class="active">Open Positions</button>
                 <button id="tab-closed">Closed Positions</button>
+                <button id="tab-summary">Summary</button>
             </nav>
         </header>
 
@@ -96,6 +97,117 @@
                         </tfoot>
                         <tbody></tbody>
                     </table>
+                </div>
+            </section>
+
+            <section id="summary-section" class="summary-section">
+                <div class="summary-header">
+                    <h2>Lifetime Performance Summary</h2>
+                    <span class="summary-header-subtitle">Aggregate metrics across all closed options strategies</span>
+                </div>
+
+                <!-- 1. Top KPI Grid -->
+                <div class="summary-kpi-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-header">
+                            <span class="summary-card-label">Lifetime Net P&L</span>
+                            <span class="summary-badge badge-pnl" id="kpi-pnl-badge">Cash Flow</span>
+                        </div>
+                        <div class="summary-card-val" id="kpi-cash-pnl">$0.00</div>
+                        <div class="summary-card-sub">
+                            <span>Broker Adjusted:</span>
+                            <strong id="kpi-broker-pnl">$0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-card-header">
+                            <span class="summary-card-label">Win Rate & Factor</span>
+                            <span class="summary-badge badge-winrate" id="kpi-winrate-badge">0%</span>
+                        </div>
+                        <div class="summary-card-val" id="kpi-win-rate">0.0%</div>
+                        <div class="summary-card-sub">
+                            <span id="kpi-wins-losses">0W / 0L</span>
+                            <span class="bullet-dot">•</span>
+                            <span>Profit Factor:</span>
+                            <strong id="kpi-profit-factor">0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-card-header">
+                            <span class="summary-card-label">Harvested Premium</span>
+                            <span class="summary-badge">Options Flow</span>
+                        </div>
+                        <div class="summary-card-val pnl-positive" id="kpi-premium">$0.00</div>
+                        <div class="summary-card-sub">
+                            <span>Commissions Paid:</span>
+                            <strong id="kpi-commissions">$0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-card-header">
+                            <span class="summary-card-label">Efficiency & Velocity</span>
+                            <span class="summary-badge badge-count" id="kpi-trades-count">0 Trades</span>
+                        </div>
+                        <div class="summary-card-val" id="kpi-avg-hold">0.0 Days</div>
+                        <div class="summary-card-sub">
+                            <span>Avg Win:</span>
+                            <strong class="pnl-positive" id="kpi-avg-win">+$0.00</strong>
+                            <span class="bullet-dot">•</span>
+                            <span>Avg Loss:</span>
+                            <strong class="pnl-negative" id="kpi-avg-loss">-$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Middle Grid: Lifecycle Outcomes & Monthly Flow -->
+                <div class="summary-middle-grid">
+                    <div class="command-panel">
+                        <div class="command-panel-header">
+                            <span>Strategy Lifecycle Outcomes</span>
+                            <span class="panel-header-desc">How positions were resolved</span>
+                        </div>
+                        <div class="outcome-list" id="summary-outcomes-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="command-panel">
+                        <div class="command-panel-header">
+                            <span>Monthly Income Flow</span>
+                            <span class="panel-header-desc">Chronological net cashflow</span>
+                        </div>
+                        <div class="monthly-income-list" id="summary-monthly-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Bottom Section: Ticker Leaderboard -->
+                <div class="command-panel summary-ticker-panel">
+                    <div class="command-panel-header">
+                        <span>Underlying Ticker Performance Leaderboard</span>
+                        <span class="panel-header-desc">Aggregated by underlying symbol</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="ticker-leaderboard-table" id="table-ticker-summary">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%">Ticker</th>
+                                    <th style="width: 12%">Trades</th>
+                                    <th style="width: 15%">Win Rate</th>
+                                    <th style="width: 18%">Cash Flow P&L</th>
+                                    <th style="width: 18%">Broker Adjusted P&L</th>
+                                    <th style="width: 12%">Avg Hold</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticker-summary-tbody">
+                                <!-- Dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </main>

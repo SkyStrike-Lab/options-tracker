@@ -677,3 +677,180 @@ def get_campaign_details(db: Session, campaign_id: str):
         "total_realized_pnl": total_realized,
         "active_cost": active_cost
     }
+
+def get_lifetime_summary(db: Session):
+    from collections import defaultdict
+    closed = db.query(models.Position).filter(models.Position.status == 'Closed').all()
+    if not closed:
+        return {
+            "total_trades": 0,
+            "total_legs": 0,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "win_rate": 0.0,
+            "cash_pnl": 0.0,
+            "broker_pnl": 0.0,
+            "gross_profit": 0.0,
+            "gross_loss": 0.0,
+            "profit_factor": 0.0,
+            "avg_win": 0.0,
+            "avg_loss": 0.0,
+            "avg_hold_days": 0.0,
+            "total_commissions": 0.0,
+            "total_premium_harvested": 0.0,
+            "outcomes": {},
+            "monthly": [],
+            "tickers": []
+        }
+
+    groups = defaultdict(list)
+    for p in closed:
+        groups[p.group_id or str(p.id)].append(p)
+
+    total_cash_pnl = 0.0
+    total_broker_pnl = 0.0
+    gross_profit = 0.0
+    gross_loss = 0.0
+    total_commissions = 0.0
+    total_premium = 0.0
+    wins = 0
+    losses = 0
+    ties = 0
+    hold_days_list = []
+    ticker_stats = defaultdict(lambda: {
+        'symbol': '',
+        'trades': 0,
+        'wins': 0,
+        'losses': 0,
+        'cash_pnl': 0.0,
+        'broker_pnl': 0.0,
+        'hold_days': []
+    })
+    monthly_stats = defaultdict(lambda: {
+        'trades': 0,
+        'cash_pnl': 0.0,
+        'broker_pnl': 0.0
+    })
+    outcomes_count = defaultdict(int)
+
+    for gid, legs in groups.items():
+        symbol = legs[0].symbol
+        cash_pnl = sum(p.cash_flow_pnl_usd for p in legs)
+        broker_pnl = sum(p.broker_adjusted_pnl_usd for p in legs)
+
+        total_cash_pnl += cash_pnl
+        total_broker_pnl += broker_pnl
+
+        if cash_pnl > 0.001:
+            wins += 1
+            gross_profit += cash_pnl
+        elif cash_pnl < -0.001:
+            losses += 1
+            gross_loss += abs(cash_pnl)
+        else:
+            ties += 1
+
+        opened_dates = [p.date_opened for p in legs if p.date_opened]
+        opened_dt = min(opened_dates) if opened_dates else None
+
+        close_dates = []
+        for p in legs:
+            for t in p.transactions:
+                if t.commission:
+                    total_commissions += t.commission
+                if t.transaction_type == 'STO':
+                    total_premium += abs(t.total_usd)
+                if t.transaction_type in ['BTC', 'STC', 'EXP'] and t.date:
+                    close_dates.append(t.date)
+
+        closed_dt = max(close_dates) if close_dates else (legs[0].expiration_date or opened_dt)
+
+        if opened_dt and closed_dt:
+            days = max(1, (closed_dt - opened_dt).days)
+            hold_days_list.append(days)
+            ticker_stats[symbol]['hold_days'].append(days)
+
+        # Month grouping
+        month_key = closed_dt.strftime('%Y-%m') if closed_dt else 'Unknown'
+        monthly_stats[month_key]['trades'] += 1
+        monthly_stats[month_key]['cash_pnl'] += cash_pnl
+        monthly_stats[month_key]['broker_pnl'] += broker_pnl
+
+        # Outcome determination
+        leg_outcomes = [p.outcome for p in legs if p.outcome]
+        if 'ASSIGNED' in leg_outcomes:
+            outcome = 'ASSIGNED'
+        elif 'CALLED_AWAY' in leg_outcomes:
+            outcome = 'CALLED_AWAY'
+        elif 'EXPIRED' in leg_outcomes:
+            outcome = 'EXPIRED'
+        elif cash_pnl < -0.001:
+            outcome = 'LOSS'
+        else:
+            outcome = 'TRADED'
+        outcomes_count[outcome] += 1
+
+        # Ticker stats
+        ticker_stats[symbol]['symbol'] = symbol
+        ticker_stats[symbol]['trades'] += 1
+        if cash_pnl > 0.001:
+            ticker_stats[symbol]['wins'] += 1
+        elif cash_pnl < -0.001:
+            ticker_stats[symbol]['losses'] += 1
+        ticker_stats[symbol]['cash_pnl'] += cash_pnl
+        ticker_stats[symbol]['broker_pnl'] += broker_pnl
+
+    profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else (round(gross_profit, 2) if gross_profit > 0 else 0.0)
+    avg_win = round(gross_profit / wins, 2) if wins > 0 else 0.0
+    avg_loss = round(gross_loss / losses, 2) if losses > 0 else 0.0
+    avg_hold = round(sum(hold_days_list) / len(hold_days_list), 1) if hold_days_list else 0.0
+    win_rate = round(wins / (wins + losses) * 100, 1) if (wins + losses) > 0 else 0.0
+
+    monthly_list = []
+    for m in sorted(monthly_stats.keys()):
+        monthly_list.append({
+            "month": m,
+            "trades": monthly_stats[m]['trades'],
+            "cash_pnl": round(monthly_stats[m]['cash_pnl'], 2),
+            "broker_pnl": round(monthly_stats[m]['broker_pnl'], 2)
+        })
+
+    ticker_list = []
+    for sym, st in ticker_stats.items():
+        sym_hold = round(sum(st['hold_days']) / len(st['hold_days']), 1) if st['hold_days'] else 0.0
+        decided = st['wins'] + st['losses']
+        sym_win_rate = round(st['wins'] / decided * 100, 1) if decided > 0 else 0.0
+        ticker_list.append({
+            "symbol": sym,
+            "trades": st['trades'],
+            "wins": st['wins'],
+            "losses": st['losses'],
+            "win_rate": sym_win_rate,
+            "cash_pnl": round(st['cash_pnl'], 2),
+            "broker_pnl": round(st['broker_pnl'], 2),
+            "avg_hold_days": sym_hold
+        })
+    ticker_list.sort(key=lambda x: x['cash_pnl'], reverse=True)
+
+    return {
+        "total_trades": len(groups),
+        "total_legs": len(closed),
+        "wins": wins,
+        "losses": losses,
+        "ties": ties,
+        "win_rate": win_rate,
+        "cash_pnl": round(total_cash_pnl, 2),
+        "broker_pnl": round(total_broker_pnl, 2),
+        "gross_profit": round(gross_profit, 2),
+        "gross_loss": round(gross_loss, 2),
+        "profit_factor": profit_factor,
+        "avg_win": avg_win,
+        "avg_loss": avg_loss,
+        "avg_hold_days": avg_hold,
+        "total_commissions": round(total_commissions, 2),
+        "total_premium_harvested": round(total_premium, 2),
+        "outcomes": dict(outcomes_count),
+        "monthly": monthly_list,
+        "tickers": ticker_list
+    }
