@@ -706,6 +706,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const pnlText = `Campaign Realized: ${pnlSign}${formatCurrency(pos.campaign_realized_pnl || 0)}`;
                         rollBadgeHtml = `<span class="badge-roll" title="${pnlText}">Roll #${pos.roll_count}</span>`;
                     }
+                    let hedgeBadgeHtml = '';
+                    if (pos.has_assigned_leg && pos.initial_type === 'BTO') {
+                        hedgeBadgeHtml = `<span class="badge-hedge" title="Paired short leg was assigned; holding as protective hedge">🛡️ Spread Hedge</span>`;
+                    }
                     legsHtml += `
                         <div style="margin-bottom: 6px;">
                             <div class="strategy-leg-item">
@@ -713,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="leg-qty">${qtyDisplay} x</span>
                                 <span class="leg-contract-name" title="OCC Symbol: ${occ}">${pos.contract_name}</span>
                                 ${rollBadgeHtml}
+                                ${hedgeBadgeHtml}
                                 <span class="leg-date">(${dateOpenedStr})</span>
                                 ${ibLegInfoHtml}
                                 ${mobileRiskStatusHtml}
@@ -863,6 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${pos.initial_type} ${pos.current_quantity}x ${pos.contract_name}
                                 <span style="font-size: 0.8rem; font-family: monospace; color: #64748b; margin-left: 10px;">(${occ})</span>
                                 <button class="btn-icon-small" title="Roll this leg" onclick="openRollModal(${pos.id})">🔄 Roll</button>
+                                <button class="btn-icon-small" title="Close or Assign this leg" onclick="openCloseModal(${pos.id}, '${pos.initial_type}', ${pos.current_quantity})">✅ Close / Assign</button>
                             </div>
                             <div style="display: flex; gap: 20px; font-size: 0.9rem;">
                                 <div style="flex: 1;">
@@ -945,10 +951,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 let legsHtml = '';
                 group.forEach(pos => {
                     const openTrans = pos.transactions.find(t => t.transaction_type === 'BTO' || t.transaction_type === 'STO');
-                    const closeTrans = pos.transactions.filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC').pop();
-                    const closeType = closeTrans ? closeTrans.transaction_type : (pos.initial_type === 'STO' ? 'BTC' : 'STC');
+                    const closeTrans = pos.transactions.filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO').pop();
                     
-                    const typeClass = closeType === 'BTC' ? 'leg-type-btc' : 'leg-type-stc';
+                    let outcomeBadgeHtml = '';
+                    if (pos.outcome === 'EXPIRED' || (closeTrans && closeTrans.transaction_type === 'EXP')) {
+                        outcomeBadgeHtml = `<span class="badge badge-exp">[EXP]</span>`;
+                    } else if (pos.outcome === 'ASSIGNED' || (closeTrans && closeTrans.transaction_type === 'ASSIGN')) {
+                        outcomeBadgeHtml = `<span class="badge badge-assigned">[ASSIGNED]</span>`;
+                    } else if (pos.outcome === 'EXERCISED' || (closeTrans && closeTrans.transaction_type === 'EXERCISE')) {
+                        outcomeBadgeHtml = `<span class="badge badge-exercised">[EXERCISED]</span>`;
+                    } else {
+                        const closeType = closeTrans ? closeTrans.transaction_type : (pos.initial_type === 'STO' ? 'BTC' : 'STC');
+                        const typeClass = closeType === 'BTC' ? 'leg-type-btc' : 'leg-type-stc';
+                        outcomeBadgeHtml = `<span class="${typeClass}">[${closeType}]</span>`;
+                    }
+
                     const dateOpened = formatDate(pos.date_opened);
                     const dateClosed = closeTrans ? formatDate(closeTrans.date) : '-';
                     
@@ -959,7 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     legsHtml += `
                         <div class="strategy-leg-item">
-                            <span class="${typeClass}">[${closeType}]</span>
+                            ${outcomeBadgeHtml}
                             <span class="leg-contract-name" style="color: #38bdf8; font-weight: 500;" title="OCC Symbol: ${occ}">${pos.contract_name}</span>
                             ${rollBadgeHtml}
                             <span class="leg-date-range">(${dateOpened} to ${dateClosed})</span>
@@ -970,7 +987,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 3. Column: Hold Time
                 const closeTransDates = group.flatMap(p => p.transactions)
-                    .filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC')
+                    .filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO')
                     .map(t => new Date(t.date));
                 const latestCloseDate = closeTransDates.length > 0 ? new Date(Math.max(...closeTransDates)) : null;
                 const holdTimeStr = (latestCloseDate && firstPos.date_opened) 
@@ -1018,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let detailsLegsHtml = '';
                 group.forEach(pos => {
                     const openTrans = pos.transactions.find(t => t.transaction_type === 'BTO' || t.transaction_type === 'STO');
-                    const closeTrans = pos.transactions.filter(t => t.transaction_type === 'BTC' || t.transaction_type === 'STC').pop();
+                    const closeTrans = pos.transactions.filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO').pop();
                     
                     const openPrice = openTrans ? formatCurrency(openTrans.option_price) : '-';
                     const closePrice = closeTrans ? formatCurrency(closeTrans.option_price) : '-';
@@ -1026,6 +1043,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     const closeComm = closeTrans ? formatCurrency(closeTrans.commission) : '0.00';
                     
                     const occ = pos.occ_symbol || '';
+
+                    let deliveryMemoHtml = '';
+                    if (pos.outcome === 'ASSIGNED' || pos.outcome === 'EXERCISED') {
+                        const basisText = pos.effective_stock_basis ? `$${formatCurrency(pos.effective_stock_basis)}/sh` : '-';
+                        deliveryMemoHtml = `
+                            <div class="delivery-memo-banner" style="margin-top: 10px;">
+                                <div class="delivery-memo-title">📦 Delivery Memo (${pos.outcome})</div>
+                                <div class="delivery-memo-grid">
+                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${pos.current_quantity * (pos.multiplier || 100)}x ${pos.symbol}</div>
+                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Strike:</span> $${formatCurrency(pos.strike_price)}</div>
+                                    <div class="delivery-memo-item"><span class="delivery-memo-label">Effective Basis:</span> <strong>${basisText}</strong></div>
+                                    ${pos.close_notes ? `<div class="delivery-memo-item" style="grid-column: 1 / -1;"><span class="delivery-memo-label">Notes:</span> ${pos.close_notes}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     detailsLegsHtml += `
                         <div class="drawer-leg-item" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0;">
                             <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">
@@ -1048,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </span>
                                 </div>
                             </div>
+                            ${deliveryMemoHtml}
                         </div>
                     `;
                 });
@@ -1180,29 +1215,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const cp = document.getElementById('edit-cp').value;
         const strike = parseFloat(document.getElementById('edit-strike').value) || 0;
         const multiplier = parseFloat(document.getElementById('edit-multiplier').value) || 100;
+        const netQty = parseInt(document.getElementById('edit-qty').value) || 1;
+
+        const openPrice = parseFloat(document.getElementById('edit-open-price')?.value) || 0;
+        const openComm = parseFloat(document.getElementById('edit-open-comm')?.value) || 0;
         
-        let netQty = 0;
-        let initialQty = 0;
+        let openTotal = netQty * openPrice * multiplier;
         let openingTotalUsd = 0;
-        let grandTotal = 0;
-        
-        document.querySelectorAll('.transaction-edit-row').forEach(row => {
-            const tType = row.querySelector('.trans-type').value;
-            const tQty = parseInt(row.querySelector('.trans-qty').value) || 0;
-            const tUsd = parseFloat(row.querySelector('.trans-usd').value) || 0;
-            
-            grandTotal += tUsd;
-            
-            if (tType === 'BTO' || tType === 'STO') {
-                netQty += tQty;
-                initialQty += tQty;
-                openingTotalUsd += tUsd;
+        if (type === 'BTO' || type === 'BTC') {
+            openingTotalUsd = -(openTotal + openComm);
+        } else {
+            openingTotalUsd = openTotal - openComm;
+        }
+
+        const openDisplay = document.getElementById('edit-open-total-display');
+        if (openDisplay) {
+            const openSign = openingTotalUsd >= 0 ? '+' : '';
+            openDisplay.textContent = `${openSign}${formatCurrency(openingTotalUsd)}`;
+            openDisplay.className = `roll-total-val ${openingTotalUsd >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+
+        let grandTotal = openingTotalUsd;
+        document.querySelectorAll('.edit-close-trans-row').forEach(row => {
+            const cType = row.querySelector('.edit-close-type').value;
+            const cPrice = parseFloat(row.querySelector('.edit-close-price').value) || 0;
+            const cComm = parseFloat(row.querySelector('.edit-close-comm').value) || 0;
+            let cTotal = netQty * cPrice * multiplier;
+            let cUsd = 0;
+            if (cType === 'BTO' || cType === 'BTC') {
+                cUsd = -(cTotal + cComm);
+            } else if (cType === 'EXP' || cType === 'ASSIGN' || cType === 'EXERCISE') {
+                cUsd = -cComm;
             } else {
-                netQty -= tQty;
+                cUsd = cTotal - cComm;
             }
+            row.querySelector('.edit-close-total-usd').value = cUsd.toFixed(2);
+            const cSign = cUsd >= 0 ? '+' : '';
+            const cDisplay = row.querySelector('.edit-close-total-display');
+            if (cDisplay) {
+                cDisplay.textContent = `${cSign}${formatCurrency(cUsd)}`;
+                cDisplay.className = `roll-total-val ${cUsd >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            }
+            grandTotal += cUsd;
         });
-        
-        document.getElementById('edit-qty').value = netQty;
+
         document.getElementById('edit-total-usd').value = grandTotal.toFixed(2);
         const editSummaryEl = document.getElementById('edit-summary-total');
         if (editSummaryEl) {
@@ -1212,12 +1268,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let maxLoss = 0;
         let breakeven = 0;
-        const netPremiumPerShare = Math.abs(openingTotalUsd / multiplier / initialQty);
+        const netPremiumPerShare = Math.abs(openingTotalUsd / multiplier / (netQty || 1));
 
-        if (initialQty <= 0) {
+        if (netQty <= 0) {
             maxLoss = 0;
         } else if (type === 'STO' && cp === 'Put') {
-            maxLoss = Math.max(0, (strike * multiplier * initialQty) - openingTotalUsd);
+            maxLoss = Math.max(0, (strike * multiplier * netQty) - openingTotalUsd);
             breakeven = strike - netPremiumPerShare;
         } else if (type === 'BTO' && cp === 'Put') {
             maxLoss = Math.max(0, -openingTotalUsd);
@@ -1273,76 +1329,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editOverrideCheckbox) editOverrideCheckbox.checked = false;
         setMaxLossInputState(editMaxLossInput, false);
         editMaxLossInput.value = (savedMaxLoss !== null && savedMaxLoss !== 999999) ? formatCurrency(savedMaxLoss) : '0.00';
-        // We'll call calculateEditMaxLoss which will populate breakeven
         
-        const transContainer = document.getElementById('edit-transactions-container');
-        transContainer.innerHTML = '';
-        pos.transactions.forEach(t => {
-            const div = document.createElement('div');
-            div.className = 'leg-entry transaction-edit-row';
-            div.dataset.transId = t.id;
-            div.innerHTML = `
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" class="trans-date" value="${t.date.split('T')[0]}" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Type</label>
-                        <select class="trans-type">
-                            <option value="BTO" ${t.transaction_type === 'BTO' ? 'selected' : ''}>BTO</option>
-                            <option value="STO" ${t.transaction_type === 'STO' ? 'selected' : ''}>STO</option>
+        const openTrans = pos.transactions.find(t => t.transaction_type === 'BTO' || t.transaction_type === 'STO');
+        const openPriceInput = document.getElementById('edit-open-price');
+        const openCommInput = document.getElementById('edit-open-comm');
+        const openTotalDisplay = document.getElementById('edit-open-total-display');
+
+        if (openTrans) {
+            openPriceInput.value = openTrans.option_price;
+            openCommInput.value = openTrans.commission;
+            openTotalDisplay.dataset.transId = openTrans.id;
+        } else {
+            openPriceInput.value = '0.00';
+            openCommInput.value = '0.00';
+            delete openTotalDisplay.dataset.transId;
+        }
+
+        const closeTrans = pos.transactions.filter(t => t.transaction_type !== 'BTO' && t.transaction_type !== 'STO');
+        const closeSection = document.getElementById('edit-single-closing-section');
+        const closeTbody = document.getElementById('edit-single-closing-tbody');
+        closeTbody.innerHTML = '';
+        if (closeTrans.length > 0) {
+            closeSection.style.display = 'block';
+            closeTrans.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'roll-leg-row edit-close-trans-row';
+                tr.dataset.transId = t.id;
+                tr.innerHTML = `
+                    <td><input type="date" class="roll-input edit-close-date" value="${t.date.split('T')[0]}" required></td>
+                    <td>
+                        <select class="roll-select edit-close-type">
                             <option value="BTC" ${t.transaction_type === 'BTC' ? 'selected' : ''}>BTC</option>
                             <option value="STC" ${t.transaction_type === 'STC' ? 'selected' : ''}>STC</option>
+                            <option value="EXP" ${t.transaction_type === 'EXP' ? 'selected' : ''}>EXP</option>
+                            <option value="ASSIGN" ${t.transaction_type === 'ASSIGN' ? 'selected' : ''}>ASSIGN</option>
+                            <option value="EXERCISE" ${t.transaction_type === 'EXERCISE' ? 'selected' : ''}>EXERCISE</option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Qty</label>
-                        <input type="number" class="trans-qty" value="${t.quantity}" min="1" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Price</label>
-                        <input type="number" class="trans-price" step="0.01" value="${t.option_price}" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Comm</label>
-                        <input type="number" class="trans-comm" step="0.01" value="${t.commission}">
-                    </div>
-                    <div class="form-group">
-                        <label>Total USD</label>
-                        <input type="number" class="trans-usd" step="0.01" value="${t.total_usd}">
-                    </div>
-                </div>
-            `;
-            transContainer.appendChild(div);
-            
-            div.querySelectorAll('input, select').forEach(el => {
-                el.addEventListener('input', () => {
-                    const qty = parseInt(div.querySelector('.trans-qty').value) || 0;
-                    const price = parseFloat(div.querySelector('.trans-price').value) || 0;
-                    const comm = parseFloat(div.querySelector('.trans-comm').value) || 0;
-                    const type = div.querySelector('.trans-type').value;
-                    const currentMultiplier = parseFloat(document.getElementById('edit-multiplier').value) || 100;
-                    let total = qty * price * currentMultiplier;
-                    if (type === 'BTO' || type === 'BTC') {
-                        div.querySelector('.trans-usd').value = (-(total + comm)).toFixed(2);
-                    } else {
-                        div.querySelector('.trans-usd').value = (total - comm).toFixed(2);
-                    }
+                    </td>
+                    <td><input type="number" class="roll-input edit-close-price" step="any" value="${t.option_price}" required></td>
+                    <td><input type="number" class="roll-input edit-close-comm" step="any" value="${t.commission}"></td>
+                    <td><span class="roll-total-val edit-close-total-display">${formatCurrency(t.total_usd)}</span><input type="hidden" class="edit-close-total-usd" value="${t.total_usd}"></td>
+                `;
+                closeTbody.appendChild(tr);
 
-                    let grandTotal = 0;
-                    document.querySelectorAll('.transaction-edit-row .trans-usd').forEach(input => {
-                        grandTotal += parseFloat(input.value) || 0;
-                    });
-                    document.getElementById('edit-total-usd').value = formatCurrency(grandTotal);
-                    calculateEditMaxLoss();
+                tr.querySelectorAll('input, select').forEach(el => {
+                    el.addEventListener('input', calculateEditMaxLoss);
+                    el.addEventListener('change', calculateEditMaxLoss);
                 });
             });
-        });
+        } else {
+            closeSection.style.display = 'none';
+        }
 
-        calculateEditMaxLoss(); // Ensure breakeven is populated on load
+        calculateEditMaxLoss();
         if (savedMaxLoss !== null && savedMaxLoss !== 999999) {
             editMaxLossInput.value = formatCurrency(savedMaxLoss);
         }
@@ -1359,29 +1398,69 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    ['edit-qty', 'edit-strike', 'edit-cp', 'edit-type', 'edit-multiplier'].forEach(id => {
-        document.getElementById(id).addEventListener('input', calculateEditMaxLoss);
+    ['edit-qty', 'edit-strike', 'edit-cp', 'edit-type', 'edit-multiplier', 'edit-open-price', 'edit-open-comm'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                if (id === 'edit-strike' || id === 'edit-cp' || id === 'edit-exp-date') {
+                    const expVal = document.getElementById('edit-exp-date').value;
+                    const strikeVal = document.getElementById('edit-strike').value;
+                    const cpVal = document.getElementById('edit-cp').value;
+                    const symbolVal = document.getElementById('edit-symbol').value;
+                    const autoName = formatContractName(expVal, strikeVal, cpVal, symbolVal);
+                    if (autoName) document.getElementById('edit-contract').value = autoName;
+                }
+                calculateEditMaxLoss();
+            });
+        }
     });
 
     formEdit.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-pos-id').value;
 
-        const transRows = document.querySelectorAll('.transaction-edit-row');
-        for (const row of transRows) {
+        // Update opening transaction
+        const openTotalDisplay = document.getElementById('edit-open-total-display');
+        const openTransId = openTotalDisplay?.dataset?.transId;
+        const qty = parseInt(document.getElementById('edit-qty').value) || 1;
+        const multiplier = parseFloat(document.getElementById('edit-multiplier').value) || 100;
+        const type = document.getElementById('edit-type').value;
+
+        if (openTransId) {
+            const openPrice = parseFloat(document.getElementById('edit-open-price').value) || 0;
+            const openComm = parseFloat(document.getElementById('edit-open-comm').value) || 0;
+            let total = qty * openPrice * multiplier;
+            let totalUsd = (type === 'BTO') ? -(total + openComm) : (total - openComm);
+            await fetch(`api/transactions/${openTransId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: document.getElementById('edit-date').value + "T00:00:00",
+                    transaction_type: type,
+                    quantity: qty,
+                    option_price: openPrice,
+                    commission: openComm,
+                    total_usd: totalUsd
+                })
+            });
+        }
+
+        // Update closing transactions
+        const closeRows = document.querySelectorAll('.edit-close-trans-row');
+        for (const row of closeRows) {
             const transId = row.dataset.transId;
-            const transData = {
-                date: row.querySelector('.trans-date').value + "T00:00:00",
-                transaction_type: row.querySelector('.trans-type').value,
-                quantity: parseInt(row.querySelector('.trans-qty').value),
-                option_price: parseFloat(row.querySelector('.trans-price').value),
-                commission: parseFloat(row.querySelector('.leg-comm') ? row.querySelector('.leg-comm').value : (row.querySelector('.trans-comm') ? row.querySelector('.trans-comm').value : 0)),
-                total_usd: parseFloat(row.querySelector('.trans-usd').value)
+            const tData = {
+                date: row.querySelector('.edit-close-date').value + "T00:00:00",
+                transaction_type: row.querySelector('.edit-close-type').value,
+                quantity: qty,
+                option_price: parseFloat(row.querySelector('.edit-close-price').value) || 0,
+                commission: parseFloat(row.querySelector('.edit-close-comm').value) || 0,
+                total_usd: parseFloat(row.querySelector('.edit-close-total-usd').value) || 0
             };
             await fetch(`api/transactions/${transId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(transData)
+                body: JSON.stringify(tData)
             });
         }
 
@@ -1394,7 +1473,7 @@ document.addEventListener('DOMContentLoaded', () => {
             strike_price: parseFloat(document.getElementById('edit-strike').value),
             call_put: document.getElementById('edit-cp').value,
             initial_type: document.getElementById('edit-type').value,
-            multiplier: parseFloat(document.getElementById('edit-multiplier').value) || 100,
+            multiplier: multiplier,
             max_loss: parseFloat(maxLossStr) || 0
         };
 
@@ -1410,9 +1489,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let currentClosePos = null;
+
     window.openCloseModal = (id, initialType, currentQty) => {
         const pos = allPositions.find(p => p.id === parseInt(id));
         if (!pos) return;
+        currentClosePos = pos;
 
         const origPrice = getOriginalPrice(pos);
         const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
@@ -1424,8 +1506,27 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.getElementById('close-date').valueAsDate = new Date();
 
+        const singleContractEl = document.getElementById('single-close-contract');
+        if (singleContractEl) singleContractEl.textContent = pos.contract_name;
+
         const closeType = (initialType === 'BTO' || initialType === 'BTC') ? 'STC' : 'BTC';
         document.getElementById('close-type').value = closeType;
+
+        const isShort = pos.initial_type === 'STO';
+        const assignBtn = document.getElementById('btn-close-method-assigned');
+        if (assignBtn) {
+            assignBtn.textContent = isShort ? '📦 Assigned @ Strike' : '📦 Exercised @ Strike';
+            assignBtn.dataset.method = isShort ? 'ASSIGNED' : 'EXERCISED';
+        }
+
+        // Reset Method Selector to TRADED
+        document.querySelectorAll('#close-method-selector .btn-method').forEach(btn => btn.classList.remove('active'));
+        const tradeBtn = document.querySelector('#close-method-selector [data-method="TRADED"]');
+        if (tradeBtn) tradeBtn.classList.add('active');
+
+        document.getElementById('close-outcome').value = 'TRADED';
+        document.getElementById('close-effective-basis').value = '';
+        document.getElementById('close-notes').value = '';
 
         const badgeEl = document.getElementById('close-type-badge');
         badgeEl.innerHTML = `
@@ -1442,14 +1543,120 @@ document.addEventListener('DOMContentLoaded', () => {
             : '';
         closePriceInput.value = defaultClosePrice;
         closePriceInput.placeholder = '0.00';
+        closePriceInput.readOnly = false;
+        closePriceInput.classList.remove('input-readonly');
         closeCommInput.value = "0.00";
+        closeCommInput.readOnly = false;
+        closeCommInput.classList.remove('input-readonly');
 
-        const origTagEl = document.getElementById('close-orig-price-tag');
-        if (origTagEl) origTagEl.textContent = origPriceStr ? `(Orig: $${origPriceStr})` : '';
+        const memoEl = document.getElementById('close-delivery-memo');
+        if (memoEl) memoEl.style.display = 'none';
 
         calculateCloseTotal();
         modalClose.style.display = 'block';
     };
+
+    // Close Method Selector Button Handler
+    const setupCloseMethodSelector = () => {
+        const selectorEl = document.getElementById('close-method-selector');
+        if (!selectorEl) return;
+        selectorEl.querySelectorAll('.btn-method').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!currentClosePos) return;
+                selectorEl.querySelectorAll('.btn-method').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const method = btn.dataset.method;
+                const pos = currentClosePos;
+                const origPrice = getOriginalPrice(pos) || 0;
+                const origPriceStr = origPrice > 0 ? Number(origPrice).toFixed(2) : '';
+                const isShort = pos.initial_type === 'STO';
+                const badgeEl = document.getElementById('close-type-badge');
+                const memoEl = document.getElementById('close-delivery-memo');
+
+                if (method === 'TRADED') {
+                    document.getElementById('close-outcome').value = 'TRADED';
+                    const closeType = isShort ? 'BTC' : 'STC';
+                    document.getElementById('close-type').value = closeType;
+                    badgeEl.innerHTML = `
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge ${closeType.toLowerCase()}">${closeType}</span>
+                    `;
+                    closePriceInput.readOnly = false;
+                    closePriceInput.classList.remove('input-readonly');
+                    const defaultClosePrice = (pos.ib_current_price !== null && pos.ib_current_price !== undefined) 
+                        ? Number(pos.ib_current_price).toFixed(2) 
+                        : '';
+                    closePriceInput.value = defaultClosePrice;
+                    closeCommInput.readOnly = false;
+                    closeCommInput.classList.remove('input-readonly');
+                    if (memoEl) memoEl.style.display = 'none';
+                    document.getElementById('close-effective-basis').value = '';
+                    document.getElementById('close-notes').value = '';
+                } else if (method === 'EXPIRED') {
+                    document.getElementById('close-outcome').value = 'EXPIRED';
+                    document.getElementById('close-type').value = 'EXP';
+                    badgeEl.innerHTML = `
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge badge-exp">EXPIRED</span>
+                    `;
+                    closePriceInput.value = '0.00';
+                    closePriceInput.readOnly = true;
+                    closePriceInput.classList.add('input-readonly');
+                    closeCommInput.value = '0.00';
+                    closeCommInput.readOnly = true;
+                    closeCommInput.classList.add('input-readonly');
+                    if (memoEl) memoEl.style.display = 'none';
+                    document.getElementById('close-effective-basis').value = '';
+                    document.getElementById('close-notes').value = 'Expired worthless';
+                } else if (method === 'ASSIGNED' || method === 'EXERCISED') {
+                    const outcome = isShort ? 'ASSIGNED' : 'EXERCISED';
+                    document.getElementById('close-outcome').value = outcome;
+                    document.getElementById('close-type').value = isShort ? 'ASSIGN' : 'EXERCISE';
+                    badgeEl.innerHTML = `
+                        <span class="badge ${pos.initial_type.toLowerCase()}">${pos.initial_type}${origPriceStr ? ` @ $${origPriceStr}` : ''}</span>
+                        <span class="roll-arrow-icon">&rarr;</span>
+                        <span class="badge ${isShort ? 'badge-assigned' : 'badge-exercised'}">${outcome}</span>
+                    `;
+                    closePriceInput.value = '0.00';
+                    closePriceInput.readOnly = true;
+                    closePriceInput.classList.add('input-readonly');
+                    closeCommInput.value = '0.00';
+                    closeCommInput.readOnly = true;
+                    closeCommInput.classList.add('input-readonly');
+
+                    const strike = pos.strike_price || 0;
+                    let basis = strike;
+                    if (pos.call_put === 'Put') {
+                        basis = strike - origPrice;
+                    } else {
+                        basis = strike + origPrice;
+                    }
+
+                    document.getElementById('close-effective-basis').value = basis.toFixed(2);
+                    const sharesCount = (parseInt(closeQtyInput.value) || 1) * (pos.multiplier || 100);
+                    document.getElementById('close-notes').value = `${outcome} ${sharesCount} shares @ $${strike.toFixed(2)}. Effective net basis: $${basis.toFixed(2)}/sh`;
+
+                    if (memoEl) {
+                        memoEl.innerHTML = `
+                            <div class="delivery-memo-title">📦 Delivery Memo (${isShort ? 'Stock Assignment' : 'Option Exercise'})</div>
+                            <div class="delivery-memo-grid">
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">Shares:</span> ${sharesCount}x ${pos.symbol}</div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">Strike:</span> $${formatCurrency(strike)}</div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">Premium ${isShort ? 'Kept' : 'Paid'}:</span> $${formatCurrency(origPrice)}/sh</div>
+                                <div class="delivery-memo-item"><span class="delivery-memo-label">Effective Basis:</span> <strong>$${formatCurrency(basis)}/sh</strong></div>
+                            </div>
+                        `;
+                        memoEl.style.display = 'block';
+                    }
+                }
+                calculateCloseTotal();
+            });
+        });
+    };
+    setupCloseMethodSelector();
 
     const closePriceInput = document.getElementById('close-option-price');
     const closeCommInput = document.getElementById('close-commission');
@@ -1459,6 +1666,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSummaryTotalEl = document.getElementById('close-summary-total');
     const closeSummaryCostEl = document.getElementById('close-summary-cost');
     const closeSummaryPnlEl = document.getElementById('close-summary-pnl');
+    const closeSingleTotalDisplayEl = document.getElementById('close-single-total-display');
+    const closeSinglePnlDisplayEl = document.getElementById('close-single-pnl-display');
 
     const calculateCloseTotal = () => {
         const id = document.getElementById('close-pos-id').value;
@@ -1473,6 +1682,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let closeTotal = 0;
         if (type === 'BTO' || type === 'BTC') {
             closeTotal = -(total + comm);
+        } else if (type === 'EXP' || type === 'ASSIGN' || type === 'EXERCISE') {
+            closeTotal = -comm;
         } else {
             closeTotal = total - comm;
         }
@@ -1480,9 +1691,14 @@ document.addEventListener('DOMContentLoaded', () => {
         closeUsdInput.value = closeTotal.toFixed(2);
 
         const sign = closeTotal >= 0 ? '+' : '';
+        const closeTotalText = `${sign}${formatCurrency(closeTotal)}`;
         if (closeSummaryTotalEl) {
-            closeSummaryTotalEl.textContent = `${sign}${formatCurrency(closeTotal)}`;
+            closeSummaryTotalEl.textContent = closeTotalText;
             closeSummaryTotalEl.className = `group-roll-stat-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+        }
+        if (closeSingleTotalDisplayEl) {
+            closeSingleTotalDisplayEl.textContent = closeTotalText;
+            closeSingleTotalDisplayEl.className = `roll-total-val ${closeTotal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
         }
 
         let openingCost = 0;
@@ -1495,9 +1711,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const pnl = openingCost + closeTotal;
             const pnlSign = pnl >= 0 ? '+' : '';
+            const pnlText = `${pnlSign}${formatCurrency(pnl)}`;
             if (closeSummaryPnlEl) {
-                closeSummaryPnlEl.textContent = `${pnlSign}${formatCurrency(pnl)}`;
+                closeSummaryPnlEl.textContent = pnlText;
                 closeSummaryPnlEl.className = `group-roll-stat-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            }
+            if (closeSinglePnlDisplayEl) {
+                closeSinglePnlDisplayEl.textContent = pnlText;
+                closeSinglePnlDisplayEl.className = `roll-total-val ${pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
             }
         }
     };
@@ -1512,13 +1733,17 @@ document.addEventListener('DOMContentLoaded', () => {
     formClose.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('close-pos-id').value;
+        const basisVal = document.getElementById('close-effective-basis').value;
         const data = {
             date: document.getElementById('close-date').value + "T00:00:00",
             transaction_type: document.getElementById('close-type').value,
             quantity: parseInt(document.getElementById('close-qty').value),
-            option_price: parseFloat(document.getElementById('close-option-price').value),
-            commission: parseFloat(document.getElementById('close-commission').value),
-            total_usd: parseFloat(document.getElementById('close-total-usd').value)
+            option_price: parseFloat(document.getElementById('close-option-price').value) || 0.0,
+            commission: parseFloat(document.getElementById('close-commission').value) || 0.0,
+            total_usd: parseFloat(document.getElementById('close-total-usd').value) || 0.0,
+            outcome: document.getElementById('close-outcome').value || "TRADED",
+            effective_stock_basis: basisVal ? parseFloat(basisVal) : null,
+            close_notes: document.getElementById('close-notes').value || null
         };
 
         const response = await fetch(`api/positions/${id}/close`, {

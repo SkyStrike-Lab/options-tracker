@@ -183,7 +183,7 @@
         </div>
 
         <div id="modal-edit" class="modal">
-            <div class="modal-content">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Edit Position</h2>
                 <div class="roll-info-banner" id="edit-info-summary"></div>
@@ -213,42 +213,78 @@
                             <input type="number" id="edit-multiplier" step="0.1" required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Contract Name</label>
-                        <input type="text" id="edit-contract" required>
+
+                    <div class="roll-section-title">Opening Position Leg</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-single-edit-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th>Contract Name</th>
+                                    <th style="width: 120px;">Strike ($)</th>
+                                    <th style="width: 95px;">C/P</th>
+                                    <th style="width: 95px;">Action</th>
+                                    <th style="width: 125px;">Open Price ($)</th>
+                                    <th style="width: 100px;">Comm ($)</th>
+                                    <th style="width: 120px;">Total USD</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="roll-leg-row">
+                                    <td>
+                                        <input type="text" id="edit-contract" class="roll-input" required>
+                                    </td>
+                                    <td>
+                                        <input type="number" id="edit-strike" class="roll-input" step="any" required>
+                                    </td>
+                                    <td>
+                                        <select id="edit-cp" class="roll-select">
+                                            <option value="Call">Call</option>
+                                            <option value="Put">Put</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select id="edit-type" class="roll-select">
+                                            <option value="BTO">BTO</option>
+                                            <option value="STO">STO</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" id="edit-open-price" class="roll-input" step="any" required placeholder="0.00">
+                                    </td>
+                                    <td>
+                                        <input type="number" id="edit-open-comm" class="roll-input" step="any" value="0.00">
+                                    </td>
+                                    <td>
+                                        <span id="edit-open-total-display" class="roll-total-val">-</span>
+                                        <input type="hidden" id="edit-total-usd">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Strike</label>
-                            <input type="number" id="edit-strike" step="any" required>
+
+                    <div id="edit-single-closing-section" style="display: none; margin-top: 20px;">
+                        <div class="roll-section-title">Closing Transactions</div>
+                        <div class="roll-table-container">
+                            <table class="roll-matrix-table" id="table-single-edit-close-matrix">
+                                <thead>
+                                    <tr class="roll-matrix-header-group">
+                                        <th>Date</th>
+                                        <th style="width: 100px;">Action</th>
+                                        <th style="width: 130px;">Close Price ($)</th>
+                                        <th style="width: 110px;">Comm ($)</th>
+                                        <th style="width: 130px;">Total USD</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="edit-single-closing-tbody"></tbody>
+                            </table>
                         </div>
-                        <div class="form-group">
-                            <label>C/P</label>
-                            <select id="edit-cp">
-                                <option value="Call">Call</option>
-                                <option value="Put">Put</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select id="edit-type">
-                                <option value="BTO">BTO</option>
-                                <option value="STO">STO</option>
-                                <option value="BTC">BTC</option>
-                                <option value="STC">STC</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="roll-section-title">Transactions History</div>
-                    <div id="edit-transactions-container">
-                        <!-- Transactions will be loaded here -->
                     </div>
                     
                     <div class="group-roll-summary-card" style="margin-top: 20px;">
                         <div class="group-roll-stat-block">
                             <span class="group-roll-stat-label">Total Cost Basis</span>
                             <div id="edit-summary-total" class="group-roll-stat-val">0.00</div>
-                            <input type="hidden" id="edit-total-usd">
                         </div>
                         <div class="group-roll-stat-block">
                             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -508,7 +544,7 @@
         </div>
 
         <div id="modal-close" class="modal">
-            <div class="modal-content">
+            <div class="modal-content large-modal roll-modal">
                 <span class="close">&times;</span>
                 <h2>Close Position</h2>
                 <div class="roll-info-banner" id="close-info-summary"></div>
@@ -516,6 +552,15 @@
                     <input type="hidden" id="close-pos-id">
                     <input type="hidden" id="close-type">
                     <input type="hidden" id="close-total-usd">
+                    <input type="hidden" id="close-outcome" value="TRADED">
+                    <input type="hidden" id="close-effective-basis">
+                    <input type="hidden" id="close-notes">
+
+                    <div class="close-method-selector" id="close-method-selector">
+                        <button type="button" class="btn-method active" data-method="TRADED">💵 Trade Close</button>
+                        <button type="button" class="btn-method" data-method="EXPIRED">⚡ Expired Worthless</button>
+                        <button type="button" class="btn-method" data-method="ASSIGNED" id="btn-close-method-assigned">📦 Assigned @ Strike</button>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -523,24 +568,49 @@
                             <input type="date" id="close-date" required>
                         </div>
                         <div class="form-group">
-                            <label>Closing Action</label>
-                            <div style="padding-top: 8px;"><span id="close-type-badge" class="badge"></span></div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Quantity</label>
+                            <label>Quantity to Close</label>
                             <input type="number" id="close-qty" min="1" required>
                         </div>
-                        <div class="form-group">
-                            <label>Close Price ($) <span id="close-orig-price-tag" class="roll-tag-sub"></span></label>
-                            <input type="number" id="close-option-price" step="any" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Commission (USD)</label>
-                            <input type="number" id="close-commission" step="any" value="0.00">
-                        </div>
                     </div>
+
+                    <div class="roll-section-title">Position Leg to Close</div>
+                    <div class="roll-table-container">
+                        <table class="roll-matrix-table" id="table-single-close-matrix">
+                            <thead>
+                                <tr class="roll-matrix-header-group">
+                                    <th class="col-leg">Leg &amp; Action</th>
+                                    <th class="col-close-price">Close Price ($)</th>
+                                    <th class="col-close-comm">Comm ($)</th>
+                                    <th class="col-close-total">Close Total</th>
+                                    <th class="col-close-pnl">Est. Realized P&amp;L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="roll-leg-row">
+                                    <td class="col-leg">
+                                        <div id="single-close-contract" class="roll-leg-contract"></div>
+                                        <div id="single-close-actions" class="roll-leg-actions">
+                                            <span id="close-type-badge" class="badge"></span>
+                                        </div>
+                                    </td>
+                                    <td class="col-close-price">
+                                        <input type="number" id="close-option-price" class="roll-input" step="any" required placeholder="0.00">
+                                    </td>
+                                    <td class="col-close-comm">
+                                        <input type="number" id="close-commission" class="roll-input" step="any" value="0.00">
+                                    </td>
+                                    <td class="col-close-total">
+                                        <span id="close-single-total-display" class="roll-total-val">-</span>
+                                    </td>
+                                    <td class="col-close-pnl">
+                                        <span id="close-single-pnl-display" class="roll-total-val">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="close-delivery-memo" class="delivery-memo-banner" style="display: none;"></div>
 
                     <div class="group-roll-summary-card">
                         <div class="group-roll-stat-block">
@@ -558,7 +628,7 @@
                     </div>
 
                     <div class="form-group" style="margin-top: 20px;">
-                        <button type="submit" class="btn-primary btn-full-width">Close Position</button>
+                        <button type="submit" id="btn-submit-close" class="btn-primary btn-full-width">Close Position</button>
                     </div>
                 </form>
             </div>

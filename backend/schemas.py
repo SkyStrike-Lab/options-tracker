@@ -63,6 +63,9 @@ class PositionUpdate(BaseModel):
     multiplier: Optional[float] = None
     status: Optional[str] = None
     realized_pnl_usd: Optional[float] = None
+    outcome: Optional[str] = None
+    effective_stock_basis: Optional[float] = None
+    close_notes: Optional[str] = None
 
 class Position(BaseModel):
     id: int
@@ -88,6 +91,10 @@ class Position(BaseModel):
     ib_current_price: Optional[float] = None
     ib_unrealized_profits: Optional[float] = None
     occ_symbol: Optional[str] = None
+    outcome: Optional[str] = None
+    effective_stock_basis: Optional[float] = None
+    close_notes: Optional[str] = None
+    has_assigned_leg: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -99,6 +106,9 @@ class ClosePositionRequest(BaseModel):
     option_price: float
     commission: float
     total_usd: float
+    outcome: Optional[str] = "TRADED"
+    effective_stock_basis: Optional[float] = None
+    close_notes: Optional[str] = None
 
 class PositionsMetadata(BaseModel):
     ib_report_datetime: Optional[str] = None

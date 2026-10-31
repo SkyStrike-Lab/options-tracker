@@ -1120,3 +1120,108 @@ table td {
     padding-left: 4px;
 }
 
+/* Lifecycle & Method Selector Styles */
+.close-method-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.btn-method {
+    flex: 1;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-method:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-method.active {
+    background: #1e293b;
+    color: #38bdf8;
+    border-color: #38bdf8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.delivery-memo-banner {
+    background: rgba(217, 119, 6, 0.08);
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 15px 0;
+    color: #fde68a;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.delivery-memo-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #fbbf24;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.delivery-memo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.delivery-memo-item {
+    font-size: 0.85rem;
+    color: #fef3c7;
+}
+
+.delivery-memo-label {
+    color: #d97706;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+/* Badges for Lifecycle Outcomes */
+.badge.EXP, .badge-exp {
+    background-color: #64748b;
+    color: #f1f5f9;
+}
+
+.badge.ASSIGN, .badge-assigned {
+    background-color: #d97706;
+    color: #ffffff;
+}
+
+.badge.EXERCISE, .badge-exercised {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+.badge-hedge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #4f46e5;
+    color: #ffffff;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+

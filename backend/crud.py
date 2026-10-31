@@ -19,9 +19,20 @@ def get_positions(db: Session, status: str = None):
         .group_by(models.Position.campaign_id)
         .all()
     )
+    assigned_groups = set(
+        gid for (gid,) in db.query(models.Position.group_id)
+        .filter(models.Position.status == "Closed", models.Position.outcome == "ASSIGNED")
+        .all() if gid
+    )
+    assigned_campaigns = set(
+        cid for (cid,) in db.query(models.Position.campaign_id)
+        .filter(models.Position.status == "Closed", models.Position.outcome == "ASSIGNED")
+        .all() if cid
+    )
     for p in positions:
         cid = p.campaign_id or p.group_id
         p.campaign_realized_pnl = campaign_pnls.get(cid, 0.0)
+        p.has_assigned_leg = (p.group_id in assigned_groups) or (cid in assigned_campaigns)
     return positions
 
 def recalculate_position(db: Session, position_id: int):
@@ -49,9 +60,12 @@ def recalculate_position(db: Session, position_id: int):
     if total_qty <= 0:
         db_position.status = "Closed"
         db_position.realized_pnl_usd = total_usd
+        if not db_position.outcome:
+            db_position.outcome = "TRADED"
     else:
         db_position.status = "Open"
         db_position.realized_pnl_usd = 0.0
+        db_position.outcome = None
         
     db.commit()
     db.refresh(db_position)
@@ -152,6 +166,10 @@ def close_position(db: Session, position_id: int, close_req: schemas.ClosePositi
     db_position = db.query(models.Position).filter(models.Position.id == position_id).first()
     if not db_position:
         return None
+
+    db_position.outcome = close_req.outcome or "TRADED"
+    db_position.effective_stock_basis = close_req.effective_stock_basis
+    db_position.close_notes = close_req.close_notes
 
     # Add transaction
     db_transaction = models.Transaction(

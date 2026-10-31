@@ -26,6 +26,9 @@ class Position(Base):
     max_loss = Column(Float, default=0.0) # Theoretical Max Loss for the group
     realized_pnl_usd = Column(Float, default=0.0)
     occ_symbol = Column(String, nullable=True)
+    outcome = Column(String, nullable=True)
+    effective_stock_basis = Column(Float, nullable=True)
+    close_notes = Column(String, nullable=True)
 
     transactions = relationship("Transaction", back_populates="position")
 
