@@ -1098,11 +1098,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const closeComm = closeTrans ? formatCurrency(closeTrans.commission) : '0.00';
                     
                     const occ = pos.occ_symbol || '';
+                    const legInitialQty = pos.transactions
+                        .filter(t => t.transaction_type === 'BTO' || t.transaction_type === 'STO')
+                        .reduce((sum, t) => sum + t.quantity, 0) || 1;
 
                     let deliveryMemoHtml = '';
                     if (pos.outcome === 'ASSIGNED' || pos.outcome === 'CALLED_AWAY' || pos.outcome === 'EXERCISED') {
                         const isDelivering = (pos.initial_type === 'STO' && pos.call_put === 'Call') || (pos.initial_type === 'BTO' && pos.call_put === 'Put');
-                        const sharesTotal = pos.current_quantity * (pos.multiplier || 100);
+                        const sharesTotal = legInitialQty * (pos.multiplier || 100);
                         const shareText = isDelivering 
                             ? `-${sharesTotal}x ${pos.symbol} (Sold / Delivered)` 
                             : `+${sharesTotal}x ${pos.symbol} (Acquired / Bought)`;
@@ -1130,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     detailsLegsHtml += `
                         <div class="drawer-leg-item" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0;">
                             <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">
-                                ${pos.initial_type} ${pos.current_quantity}x ${pos.contract_name}
+                                ${pos.initial_type} ${legInitialQty}x ${pos.contract_name}
                                 <span style="font-size: 0.8rem; font-family: monospace; color: #64748b; margin-left: 10px;">(${occ})</span>
                                 <button class="btn-icon-small" title="Reopen / Undo close for this leg" onclick="reopenPosition(${pos.id})">↩️ Reopen Leg</button>
                             </div>
@@ -2911,7 +2914,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.toggleDetails = (btn, posId) => {
-        const row = document.querySelector(`.pos-details-${posId}`);
+        let row = null;
+        if (btn) {
+            const tr = btn.closest('tr');
+            if (tr && tr.nextElementSibling && tr.nextElementSibling.classList.contains('details-row')) {
+                row = tr.nextElementSibling;
+            } else if (tr) {
+                const table = tr.closest('table');
+                if (table) row = table.querySelector(`.pos-details-${posId}`);
+            }
+        }
+        if (!row && posId) {
+            row = document.querySelector(`.pos-details-${posId}`);
+        }
         if (row) {
             const isHidden = row.style.display === 'none';
             row.style.display = isHidden ? '' : 'none';
