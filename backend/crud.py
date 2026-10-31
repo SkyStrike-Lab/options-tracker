@@ -199,6 +199,45 @@ def delete_group(db: Session, group_id: str):
     db.query(models.Position).filter(models.Position.group_id == group_id).delete()
     db.commit()
 
+def delete_transaction(db: Session, transaction_id: int):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    if not db_transaction:
+        return None
+    position_id = db_transaction.position_id
+    db.delete(db_transaction)
+    db.commit()
+    return recalculate_position(db, position_id)
+
+def reopen_position(db: Session, position_id: int):
+    db_position = db.query(models.Position).filter(models.Position.id == position_id).first()
+    if not db_position:
+        return None
+    db.query(models.Transaction).filter(
+        models.Transaction.position_id == position_id,
+        models.Transaction.transaction_type.notin_(['BTO', 'STO'])
+    ).delete(synchronize_session=False)
+    db_position.outcome = None
+    db_position.effective_stock_basis = None
+    db_position.close_notes = None
+    db.commit()
+    return recalculate_position(db, position_id)
+
+def reopen_group(db: Session, group_id: str):
+    positions = db.query(models.Position).filter(models.Position.group_id == group_id).all()
+    if not positions:
+        return None
+    for pos in positions:
+        db.query(models.Transaction).filter(
+            models.Transaction.position_id == pos.id,
+            models.Transaction.transaction_type.notin_(['BTO', 'STO'])
+        ).delete(synchronize_session=False)
+        pos.outcome = None
+        pos.effective_stock_basis = None
+        pos.close_notes = None
+        db.commit()
+        recalculate_position(db, pos.id)
+    return positions
+
 def compute_occ_symbol(symbol: str, expiration_date: datetime, call_put: str, strike_price: float) -> Optional[str]:
     if not (symbol and expiration_date and call_put and strike_price is not None):
         return None

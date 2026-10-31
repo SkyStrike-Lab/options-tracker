@@ -219,6 +219,28 @@ def delete_group(group_id: str, db: Session = Depends(get_db)):
     crud.delete_group(db, group_id)
     return {"message": "Group deleted"}
 
+@app.delete("/api/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    pos = crud.delete_transaction(db=db, transaction_id=transaction_id)
+    if pos is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return {"message": "Transaction deleted successfully"}
+
+@app.post("/api/positions/{position_id}/reopen")
+def reopen_position(position_id: int, db: Session = Depends(get_db)):
+    pos = crud.reopen_position(db=db, position_id=position_id)
+    if pos is None:
+        raise HTTPException(status_code=404, detail="Position not found")
+    return {"message": "Position reopened successfully", "id": position_id}
+
+@app.post("/api/groups/{group_id}/reopen")
+@app.post("/api/positions/group/{group_id}/reopen")
+def reopen_group(group_id: str, db: Session = Depends(get_db)):
+    positions = crud.reopen_group(db=db, group_id=group_id)
+    if positions is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return {"message": "Group reopened successfully", "group_id": group_id}
+
 # Serve frontend
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 app.mount("/static", StaticFiles(directory=frontend_path), name="static")

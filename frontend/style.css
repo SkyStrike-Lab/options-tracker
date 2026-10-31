@@ -1012,14 +1012,17 @@ table td {
 }
 
 /* Table styling for New and Group Edit matrices */
-#table-new-legs td, #table-group-edit-matrix td, #table-group-edit-close-matrix td {
+#table-new-legs td, #table-group-edit-matrix td, #table-group-edit-close-matrix td,
+#table-single-edit-matrix td, #table-single-edit-close-matrix td {
     padding: 8px 10px;
     vertical-align: middle;
 }
 
 #table-new-legs input.roll-input, #table-new-legs select.roll-input,
 #table-group-edit-matrix input.roll-input, #table-group-edit-matrix select.roll-input,
-#table-group-edit-close-matrix input.roll-input, #table-group-edit-close-matrix select.roll-input {
+#table-group-edit-close-matrix input.roll-input, #table-group-edit-close-matrix select.roll-input,
+#table-single-edit-matrix input.roll-input, #table-single-edit-matrix select.roll-input,
+#table-single-edit-close-matrix input.roll-input, #table-single-edit-close-matrix select.roll-input {
     width: 100%;
     padding: 6px 8px;
     font-size: 0.9rem;
@@ -1027,6 +1030,44 @@ table td {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     color: var(--text-color);
+}
+
+.roll-select,
+.roll-matrix-table select,
+select.roll-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: #1e293b;
+    color: #ffffff;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+    padding-right: 26px;
+}
+
+.roll-select:focus,
+.roll-matrix-table select:focus,
+select.roll-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.roll-select option,
+.roll-matrix-table select option,
+select.roll-input option {
+    background-color: #0f172a;
+    color: #ffffff;
 }
 
 .roll-input-hint {

@@ -1027,12 +1027,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     actionsHtml = `
                         <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
                         <button class="btn-icon" title="Edit Group" onclick="openGroupEditModal('${firstPos.group_id}')">✏️</button>
+                        <button class="btn-icon" title="Reopen / Undo Close Group" onclick="reopenGroup('${firstPos.group_id}')">↩️</button>
                         <button class="btn-icon" title="Delete Group" onclick="deleteGroup('${firstPos.group_id}')">❌</button>
                     `;
                 } else {
                     actionsHtml = `
                         <button class="btn-icon" title="View Details" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
                         <button class="btn-icon" title="Edit Position" onclick="openEditModal(${firstPos.id})">✏️</button>
+                        <button class="btn-icon" title="Reopen / Undo Close Position" onclick="reopenPosition(${firstPos.id})">↩️</button>
                         <button class="btn-icon" title="Delete Position" onclick="deletePosition(${firstPos.id})">❌</button>
                     `;
                 }
@@ -1100,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">
                                 ${pos.initial_type} ${pos.current_quantity}x ${pos.contract_name}
                                 <span style="font-size: 0.8rem; font-family: monospace; color: #64748b; margin-left: 10px;">(${occ})</span>
+                                <button class="btn-icon-small" title="Reopen / Undo close for this leg" onclick="reopenPosition(${pos.id})">↩️ Reopen Leg</button>
                             </div>
                             <div style="display: flex; gap: 20px; font-size: 0.9rem;">
                                 <div>
@@ -1340,9 +1343,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const infoEl = document.getElementById('edit-info-summary');
         if (infoEl) {
+            const reopenBtnHtml = pos.status === 'Closed'
+                ? `<button type="button" class="btn-icon-small" style="margin-left: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; cursor: pointer; padding: 2px 8px; border-radius: 4px;" onclick="reopenPosition(${pos.id})">↩️ Reopen Position</button>`
+                : '';
             infoEl.innerHTML = `
                 <span class="roll-summary-badge">${pos.symbol}</span>
                 Editing <strong>${pos.contract_name}</strong> (${pos.current_quantity}x) &bull; Status: <span class="badge ${pos.status.toLowerCase()}">${pos.status}</span>
+                ${reopenBtnHtml}
             `;
         }
 
@@ -1404,6 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><input type="number" class="roll-input edit-close-price" step="any" value="${t.option_price}" required></td>
                     <td><input type="number" class="roll-input edit-close-comm" step="any" value="${t.commission}"></td>
                     <td><span class="roll-total-val edit-close-total-display">${formatCurrency(t.total_usd)}</span><input type="hidden" class="edit-close-total-usd" value="${t.total_usd}"></td>
+                    <td style="text-align: center;"><button type="button" class="btn-icon-small" title="Delete this closing transaction and reopen position" onclick="deleteClosingTransaction(${t.id}, ${pos.id})">❌</button></td>
                 `;
                 closeTbody.appendChild(tr);
 
@@ -2154,9 +2162,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const infoEl = document.getElementById('group-edit-info-summary');
         if (infoEl) {
+            const isAllClosed = group.every(p => p.status === 'Closed');
+            const reopenGroupBtnHtml = isAllClosed
+                ? `<button type="button" class="btn-icon-small" style="margin-left: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; cursor: pointer; padding: 2px 8px; border-radius: 4px;" onclick="reopenGroup('${groupId}')">↩️ Reopen Group</button>`
+                : '';
             infoEl.innerHTML = `
                 <span class="roll-summary-badge">${group[0].symbol}</span>
                 Editing <strong>${group.length}-Leg Strategy</strong> (${initialQty}x) &bull; Exp: ${group[0].expiration_date ? group[0].expiration_date.split('T')[0] : '-'}
+                ${reopenGroupBtnHtml}
             `;
         }
         
@@ -2832,6 +2845,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete this ENTIRE group and all legs?')) return;
         const response = await fetch(`api/positions/group/${groupId}`, { method: 'DELETE' });
         if (response.ok) loadPositions(currentStatus);
+    };
+
+    window.reopenPosition = async (id) => {
+        if (!confirm('Reopen this position? This will delete its closing transactions and move it back to Active Open Options.')) return;
+        const response = await fetch(`api/positions/${id}/reopen`, { method: 'POST' });
+        if (response.ok) {
+            if (modalEdit) modalEdit.style.display = 'none';
+            loadPositions(currentStatus);
+        } else {
+            alert('Failed to reopen position');
+        }
+    };
+
+    window.reopenGroup = async (groupId) => {
+        if (!confirm('Reopen this entire group? This will delete closing transactions for all legs and move it back to Active Open Options.')) return;
+        const response = await fetch(`api/groups/${groupId}/reopen`, { method: 'POST' });
+        if (response.ok) {
+            if (modalGroupEdit) modalGroupEdit.style.display = 'none';
+            loadPositions(currentStatus);
+        } else {
+            alert('Failed to reopen group');
+        }
+    };
+
+    window.deleteClosingTransaction = async (transId, posId) => {
+        if (!confirm('Delete this closing transaction and reopen the position?')) return;
+        const res = await fetch(`api/transactions/${transId}`, { method: 'DELETE' });
+        if (res.ok) {
+            if (modalEdit) modalEdit.style.display = 'none';
+            loadPositions(currentStatus);
+        } else {
+            alert('Failed to delete closing transaction');
+        }
     };
 
     window.toggleDetails = (btn, posId) => {
