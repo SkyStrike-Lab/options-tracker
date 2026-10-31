@@ -714,6 +714,7 @@ def get_lifetime_summary(db: Session):
     gross_loss = 0.0
     total_commissions = 0.0
     total_premium = 0.0
+    net_credit_opened = 0.0
     wins = 0
     losses = 0
     ties = 0
@@ -761,6 +762,9 @@ def get_lifetime_summary(db: Session):
                     total_commissions += t.commission
                 if t.transaction_type == 'STO':
                     total_premium += abs(t.total_usd)
+                    net_credit_opened += t.total_usd
+                elif t.transaction_type == 'BTO':
+                    net_credit_opened += t.total_usd
                 if t.transaction_type in ['BTC', 'STC', 'EXP'] and t.date:
                     close_dates.append(t.date)
 
@@ -806,6 +810,7 @@ def get_lifetime_summary(db: Session):
     avg_loss = round(gross_loss / losses, 2) if losses > 0 else 0.0
     avg_hold = round(sum(hold_days_list) / len(hold_days_list), 1) if hold_days_list else 0.0
     win_rate = round(wins / (wins + losses) * 100, 1) if (wins + losses) > 0 else 0.0
+    premium_capture_rate = round((total_cash_pnl / net_credit_opened * 100), 1) if net_credit_opened > 0 else 0.0
 
     monthly_list = []
     for m in sorted(monthly_stats.keys()):
@@ -850,6 +855,8 @@ def get_lifetime_summary(db: Session):
         "avg_hold_days": avg_hold,
         "total_commissions": round(total_commissions, 2),
         "total_premium_harvested": round(total_premium, 2),
+        "net_credit_opened": round(net_credit_opened, 2),
+        "premium_capture_rate": premium_capture_rate,
         "outcomes": dict(outcomes_count),
         "monthly": monthly_list,
         "tickers": ticker_list

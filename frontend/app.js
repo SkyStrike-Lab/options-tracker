@@ -222,7 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const winRateBadgeEl = document.getElementById('kpi-winrate-badge');
             const winsLossesEl = document.getElementById('kpi-wins-losses');
             const profitFactorEl = document.getElementById('kpi-profit-factor');
-            const premiumEl = document.getElementById('kpi-premium');
+            const captureRateEl = document.getElementById('kpi-capture-rate');
+            const netCreditEl = document.getElementById('kpi-net-credit');
             const commissionsEl = document.getElementById('kpi-commissions');
             const tradesCountEl = document.getElementById('kpi-trades-count');
             const avgHoldEl = document.getElementById('kpi-avg-hold');
@@ -242,7 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
             winsLossesEl.textContent = `${data.wins} Wins, ${data.losses} Losses`;
             profitFactorEl.textContent = data.profit_factor.toFixed(2);
 
-            premiumEl.textContent = `+$${formatCurrency(data.total_premium_harvested)}`;
+            const captureVal = data.premium_capture_rate || 0.0;
+            captureRateEl.textContent = `${captureVal.toFixed(1)}%`;
+            captureRateEl.className = `summary-card-val ${captureVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            netCreditEl.textContent = `$${formatCurrency(data.net_credit_opened || 0)}`;
             commissionsEl.textContent = `$${formatCurrency(data.total_commissions)}`;
 
             tradesCountEl.textContent = `${data.total_trades} Strategies (${data.total_legs} Legs)`;

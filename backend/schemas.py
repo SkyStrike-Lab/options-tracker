@@ -237,6 +237,8 @@ class LifetimeSummaryResponse(BaseModel):
     avg_hold_days: float
     total_commissions: float
     total_premium_harvested: float
+    net_credit_opened: float = 0.0
+    premium_capture_rate: float = 0.0
     outcomes: dict
     monthly: List[MonthlySummary]
     tickers: List[TickerSummary]
