@@ -13,32 +13,12 @@
             padding: 24px 20px;
         }
         .details-header {
-            margin-bottom: 25px;
-        }
-        .details-nav-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-        }
-        .btn-back-nav {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #38bdf8;
-            text-decoration: none;
-            font-size: 0.88rem;
-            font-weight: 500;
-            padding: 6px 12px;
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        .btn-back-nav:hover {
-            background: rgba(56, 189, 248, 0.2);
-            color: #ffffff;
-            border-color: #38bdf8;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
         }
         .details-title-row {
             display: flex;
@@ -218,14 +198,11 @@
 
     <div class="details-container">
         <header class="details-header">
-            <div class="details-nav-bar">
-                <a href="/" class="btn-back-nav">&larr; Back to Dashboard</a>
-                <div class="group-id-display" id="group-id-text"></div>
-            </div>
             <div class="details-title-row">
                 <h1 id="page-title">Strategy Details</h1>
                 <div id="strategy-status-badge" class="badge-status-pill">OPEN</div>
             </div>
+            <div class="group-id-display" id="group-id-text"></div>
         </header>
 
         <div id="error-container" style="display: none;" class="error-message">

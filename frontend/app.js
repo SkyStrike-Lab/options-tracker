@@ -809,8 +809,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isSpread) {
                     actionsHtml = `
                         <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-action-pill btn-roll" title="Roll Strategy / Spread" onclick="openGroupRollModal('${firstPos.group_id}')">🔄 Roll</button>
-                        <button class="btn-action-pill btn-close" title="Close Strategy / Group" onclick="openGroupCloseModal('${firstPos.group_id}')">✅ Close</button>
+                        <button class="btn-icon btn-action-roll" title="Roll Strategy / Spread" onclick="openGroupRollModal('${firstPos.group_id}')">🔄</button>
+                        <button class="btn-icon btn-action-close" title="Close Strategy / Group" onclick="openGroupCloseModal('${firstPos.group_id}')">✅</button>
                         <div class="action-menu-dropdown">
                             <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
                             <div class="action-menu-popover" style="display: none;">
@@ -824,8 +824,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     actionsHtml = `
                         <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-action-pill btn-roll" title="Roll Position" onclick="openRollModal(${firstPos.id})">🔄 Roll</button>
-                        <button class="btn-action-pill btn-close" title="Close Position" onclick="openCloseModal(${firstPos.id}, '${firstPos.initial_type}', ${firstPos.current_quantity})">✅ Close</button>
+                        <button class="btn-icon btn-action-roll" title="Roll Position" onclick="openRollModal(${firstPos.id})">🔄</button>
+                        <button class="btn-icon btn-action-close" title="Close Position" onclick="openCloseModal(${firstPos.id}, '${firstPos.initial_type}', ${firstPos.current_quantity})">✅</button>
                         <div class="action-menu-dropdown">
                             <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
                             <div class="action-menu-popover" style="display: none;">
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isSpread) {
                     actionsHtml = `
                         <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-action-pill btn-reopen" title="Reopen / Undo Close Group" onclick="reopenGroup('${firstPos.group_id}')">↩️ Reopen</button>
+                        <button class="btn-icon btn-action-reopen" title="Reopen / Undo Close Group" onclick="reopenGroup('${firstPos.group_id}')">↩️</button>
                         <div class="action-menu-dropdown">
                             <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
                             <div class="action-menu-popover" style="display: none;">
@@ -1056,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     actionsHtml = `
                         <button class="btn-icon btn-toggle-drawer" title="Toggle Legs Drawer (ℹ️)" onclick="toggleDetails(this, '${firstPos.group_id}')">ℹ️</button>
-                        <button class="btn-action-pill btn-reopen" title="Reopen / Undo Close Position" onclick="reopenPosition(${firstPos.id})">↩️ Reopen</button>
+                        <button class="btn-icon btn-action-reopen" title="Reopen / Undo Close Position" onclick="reopenPosition(${firstPos.id})">↩️</button>
                         <div class="action-menu-dropdown">
                             <button class="btn-icon btn-action-more" title="More Options" onclick="toggleActionMenu(event, this)">•••</button>
                             <div class="action-menu-popover" style="display: none;">
