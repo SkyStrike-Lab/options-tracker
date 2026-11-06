@@ -6,10 +6,24 @@ resources:
   - ingress.yaml
 images:
   - name: registry.home/options-tracker:placeholder
-    newName: options-tracker-options-tracker
+    newName: registry.home/options-tracker
     newTag: latest
 patches:
   - path: patch-storage.yaml
     target:
       kind: Deployment
       name: options-tracker
+  - target:
+      kind: ConfigMap
+      name: options-tracker-config
+    patch: |-
+      - op: replace
+        path: /data/IB_DATA_FILE
+        value: "/app/data/ib_data.json"
+  - target:
+      kind: Deployment
+      name: options-tracker
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always

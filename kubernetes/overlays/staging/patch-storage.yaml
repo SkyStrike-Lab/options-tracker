@@ -1,7 +1,12 @@
 - op: replace
-  path: /spec/template/spec/volumes/0
+  path: /spec/template/spec/volumes
   value:
-    name: options-tracker-data
-    hostPath:
-      path: /home/kirito/homelab/services/options-tracker/data
-      type: DirectoryOrCreate
+    - name: options-tracker-data
+      hostPath:
+        path: /home/kirito/homelab/services/options-tracker/data
+        type: DirectoryOrCreate
+- op: replace
+  path: /spec/template/spec/containers/0/volumeMounts
+  value:
+    - name: options-tracker-data
+      mountPath: /app/data
