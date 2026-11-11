@@ -46,7 +46,6 @@ body {
     color: var(--text-color);
     margin: 0;
     padding: 20px;
-    padding-top: calc(var(--nav-height, 0px) + 20px);
     font-size: 18px;
 }
 
